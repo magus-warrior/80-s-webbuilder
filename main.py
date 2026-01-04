@@ -8,11 +8,14 @@ from sqlalchemy.orm import Session
 
 from database import get_db, init_db
 from models import Project
+from routers.auth import router as auth_router
 
 app = FastAPI()
 ROOT_DIR = Path(__file__).resolve().parent
 DIST_DIR = ROOT_DIR / "dist"
 INDEX_FILE = DIST_DIR / "index.html"
+
+app.include_router(auth_router)
 
 
 @app.on_event("startup")
