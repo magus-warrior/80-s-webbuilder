@@ -51,11 +51,17 @@ sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='fastapi_app
 echo "Installing backend dependencies (requirements.txt)..."
 python -m pip install -r requirements.txt
 
-if ! command -v gunicorn >/dev/null 2>&1; then
-  echo "Error: gunicorn is not available after dependency install." >&2
+if ! command -v uvicorn >/dev/null 2>&1; then
+  echo "Error: uvicorn is not available after dependency install." >&2
   echo "Ensure it is listed in requirements.txt or install it with pip." >&2
   exit 1
 fi
+
+uvicorn_path="$(command -v uvicorn)"
+start_tmp="$(mktemp)"
+sed "s|@UVICORN_PATH@|$uvicorn_path|g" "$ROOT_DIR/start.sh" > "$start_tmp"
+mv "$start_tmp" "$ROOT_DIR/start.sh"
+chmod +x "$ROOT_DIR/start.sh"
 
 frontend_choice=$(prompt_choice "Install frontend dependencies with npm? [y/N]: " "N")
 if [[ "${frontend_choice,,}" == "y" ]]; then
