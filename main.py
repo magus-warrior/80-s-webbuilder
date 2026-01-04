@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 import uuid
@@ -54,6 +55,35 @@ def get_project(
     return serialize_project(project)
 
 
+@app.post("/projects/{project_id}/publish")
+def publish_project(
+    project_id: int,
+    payload: dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    is_published = bool(payload.get("isPublished"))
+    if is_published:
+        project.is_published = True
+        if not project.public_slug:
+            project.public_slug = build_public_slug(project, db)
+        if project.published_at is None:
+            project.published_at = datetime.now(timezone.utc)
+    else:
+        project.is_published = False
+        project.published_at = None
+    db.commit()
+    db.refresh(project)
+    return serialize_project(project)
+
+
 @app.put("/projects/{project_id}")
 def update_project(
     project_id: int,
@@ -103,6 +133,7 @@ def create_project(
         name=name,
         slug=slug,
         public_id=uuid.uuid4().hex,
+        is_published=False,
         data=payload,
     )
     db.add(project)
@@ -116,11 +147,32 @@ def build_slug(name: str) -> str:
     return slug or "project"
 
 
+def build_public_slug(project: Project, db: Session) -> str:
+    base_slug = project.slug or build_slug(project.name)
+    candidate = base_slug
+    suffix = 1
+    while (
+        db.query(Project)
+        .filter(Project.public_slug == candidate, Project.id != project.id)
+        .first()
+    ):
+        suffix += 1
+        candidate = f"{base_slug}-{suffix}"
+    return candidate
+
+
 def serialize_project(project: Project) -> dict[str, Any]:
     data = project.data or {}
-    if "id" not in data:
-        data = {**data, "id": str(project.id)}
-    return data
+    response = {
+        **data,
+        "id": str(project.id),
+        "name": project.name,
+        "slug": project.slug,
+        "publicSlug": project.public_slug,
+        "isPublished": project.is_published,
+        "publishedAt": project.published_at.isoformat() if project.published_at else None,
+    }
+    return response
 
 
 def serialize_project_summary(project: Project) -> dict[str, Any]:
@@ -130,8 +182,23 @@ def serialize_project_summary(project: Project) -> dict[str, Any]:
         "name": project.name,
         "slug": project.slug,
         "publicId": project.public_id,
+        "publicSlug": project.public_slug,
+        "isPublished": project.is_published,
+        "publishedAt": project.published_at.isoformat() if project.published_at else None,
         "updatedAt": data.get("updatedAt"),
     }
+
+
+@app.get("/public/{slug}")
+def get_public_project(slug: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+    project = (
+        db.query(Project)
+        .filter(Project.public_slug == slug, Project.is_published.is_(True))
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return serialize_project(project)
 
 
 if DIST_DIR.exists():

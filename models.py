@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 
 from database import Base
@@ -21,4 +21,7 @@ class Project(Base):
     name = Column(String, nullable=False)
     slug = Column(String, nullable=True, index=True)
     public_id = Column(String, nullable=True, unique=True, index=True)
+    public_slug = Column(String, nullable=True, unique=True, index=True)
+    is_published = Column(Boolean, nullable=False, default=False)
+    published_at = Column(DateTime(timezone=True), nullable=True)
     data = Column(JSONB, nullable=False, default=dict)

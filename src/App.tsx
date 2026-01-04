@@ -32,6 +32,7 @@ export default function App() {
   const [isLoadingProject, setIsLoadingProject] = useState(false);
   const [themeTokens, setThemeTokens] = useState<ThemeToken[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const authToken = useAuthStore((state) => state.token);
   const authEmail = useAuthStore((state) => state.email);
   const clearAuth = useAuthStore((state) => state.clearAuth);
@@ -113,6 +114,49 @@ export default function App() {
       setIsSaving(false);
     }
   };
+
+  const handlePublishToggle = async (nextPublished: boolean) => {
+    if (!activeProjectId || !project) {
+      return;
+    }
+    setIsPublishing(true);
+    setProjectError(null);
+    try {
+      const response = await fetch(`/projects/${activeProjectId}/publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        },
+        body: JSON.stringify({ isPublished: nextPublished })
+      });
+      if (!response.ok) {
+        throw new Error(`Publish update failed: ${response.status}`);
+      }
+      const updatedProject = (await response.json()) as Project;
+      setProject(updatedProject);
+      setProjectList((prev) =>
+        prev.map((item) =>
+          item.id === updatedProject.id
+            ? {
+                ...item,
+                publicSlug: updatedProject.publicSlug ?? item.publicSlug,
+                isPublished: updatedProject.isPublished,
+                publishedAt: updatedProject.publishedAt ?? item.publishedAt
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const publicLink = project?.publicSlug
+    ? `${window.location.origin}/public/${project.publicSlug}`
+    : null;
 
   useEffect(() => {
     if (!authToken) {
@@ -365,6 +409,36 @@ export default function App() {
                   {project ? new Date(project.updatedAt).toLocaleString() : '—'}
                 </p>
               </div>
+            </div>
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-900/80 bg-black/60 px-6 py-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Publishing</p>
+                <p className="mt-2 text-sm text-slate-200">
+                  {project?.isPublished ? 'Published' : 'Draft'}
+                </p>
+                {publicLink ? (
+                  <a
+                    href={publicLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block text-xs uppercase tracking-[0.2em] text-cyan-200 hover:text-cyan-100"
+                  >
+                    {publicLink}
+                  </a>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => handlePublishToggle(!project?.isPublished)}
+                disabled={!project || isPublishing}
+                className="rounded-full border-neon-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-200 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isPublishing
+                  ? 'Updating...'
+                  : project?.isPublished
+                    ? 'Unpublish'
+                    : 'Publish'}
+              </button>
             </div>
             {project ? (
               <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
