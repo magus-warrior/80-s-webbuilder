@@ -1,13 +1,13 @@
 {
-  "id": "project-80s",
-  "name": "Neon Landing",
-  "description": "A retro-inspired landing page configured for the 80's Webbuilder demo.",
+  "id": "project-demon-beauty",
+  "name": "demon.beauty Starter",
+  "description": "A dark-glam landing page starter for demon.beauty.",
   "updatedAt": "2024-05-12T18:30:00Z",
   "themeTokens": [
     {
-      "name": "brand.neon",
+      "name": "brand.demon",
       "value": "#f72585",
-      "description": "Primary neon accent used for buttons and highlights.",
+      "description": "Primary luminous accent used for buttons and highlights.",
       "category": "color"
     },
     {
@@ -49,7 +49,7 @@
               "type": "text",
               "name": "Headline",
               "props": {
-                "content": "Build neon layouts faster"
+                "content": "Summon layouts faster"
               }
             },
             {
@@ -57,7 +57,7 @@
               "type": "button",
               "name": "Primary CTA",
               "props": {
-                "label": "Launch Builder",
+                "label": "Enter Studio",
                 "style": "primary"
               }
             }
@@ -76,7 +76,7 @@
               "type": "text",
               "name": "Feature One",
               "props": {
-                "content": "Retro-ready layouts"
+                "content": "Ritual-ready layouts"
               }
             },
             {
@@ -84,7 +84,7 @@
               "type": "text",
               "name": "Feature Two",
               "props": {
-                "content": "Component building blocks"
+                "content": "Modular relics"
               }
             },
             {
@@ -92,7 +92,7 @@
               "type": "text",
               "name": "Feature Three",
               "props": {
-                "content": "Instant theming"
+                "content": "Instant aura shifts"
               }
             }
           ]
@@ -117,7 +117,7 @@
               "type": "text",
               "name": "Story Copy",
               "props": {
-                "content": "We remix retro aesthetics with modern tooling."
+                "content": "We conjure dark-glam aesthetics with modern tooling."
               }
             }
           ]
