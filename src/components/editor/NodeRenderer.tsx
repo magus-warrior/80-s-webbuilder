@@ -1,4 +1,6 @@
 import type { CSSProperties, MouseEvent } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import interact from 'interactjs';
 
 import type { Node } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
@@ -143,20 +145,103 @@ const nodeRenderers: Partial<Record<Node['type'], (node: Node) => JSX.Element>> 
   container: renderContainerNode
 };
 
+const parseLength = (value?: string) => {
+  if (!value) {
+    return 0;
+  }
+  const parsed = Number.parseFloat(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const toPx = (value: number) => `${Math.round(value)}px`;
+
 export default function NodeRenderer({ node }: NodeRendererProps) {
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
+  const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const x = parseLength(node.props?.x);
+  const y = parseLength(node.props?.y);
+  const width = node.props?.width;
+  const height = node.props?.height;
+  const positionRef = useRef({ x, y });
   const renderer = nodeRenderers[node.type];
   const isSelected = selectedNodeId === node.id;
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
     event.stopPropagation();
     setSelectedNodeId(node.id);
   };
+  const positionStyle = useMemo(() => {
+    const style: CSSProperties = {
+      transform: `translate(${x}px, ${y}px)`,
+      touchAction: 'none'
+    };
+
+    if (width) {
+      style.width = width;
+    }
+
+    if (height) {
+      style.height = height;
+    }
+
+    return style;
+  }, [x, y, width, height]);
+
+  useEffect(() => {
+    positionRef.current = { x, y };
+  }, [x, y]);
+
+  useEffect(() => {
+    const element = wrapperRef.current;
+    if (!element) {
+      return;
+    }
+
+    const interactable = interact(element)
+      .draggable({
+        listeners: {
+          move(event) {
+            const { x: currentX, y: currentY } = positionRef.current;
+            const nextX = currentX + event.dx;
+            const nextY = currentY + event.dy;
+            positionRef.current = { x: nextX, y: nextY };
+            updateNodeProps(node.id, {
+              x: toPx(nextX),
+              y: toPx(nextY)
+            });
+          }
+        }
+      })
+      .resizable({
+        edges: { left: true, right: true, bottom: true, top: true },
+        listeners: {
+          move(event) {
+            const { x: currentX, y: currentY } = positionRef.current;
+            const nextX = currentX + event.deltaRect.left;
+            const nextY = currentY + event.deltaRect.top;
+            positionRef.current = { x: nextX, y: nextY };
+            updateNodeProps(node.id, {
+              x: toPx(nextX),
+              y: toPx(nextY),
+              width: toPx(event.rect.width),
+              height: toPx(event.rect.height)
+            });
+          }
+        }
+      });
+
+    return () => {
+      interactable.unset();
+    };
+  }, [node.id, updateNodeProps]);
 
   if (renderer) {
     return (
       <div
         onClick={handleClick}
+        ref={wrapperRef}
+        style={positionStyle}
         className={`cursor-pointer rounded-2xl transition ${
           isSelected
             ? 'ring-2 ring-fuchsia-400 ring-offset-2 ring-offset-slate-950'
@@ -171,12 +256,13 @@ export default function NodeRenderer({ node }: NodeRendererProps) {
   return (
     <div
       onClick={handleClick}
+      ref={wrapperRef}
       className={`cursor-pointer rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 transition ${
         isSelected
           ? 'ring-2 ring-fuchsia-400 ring-offset-2 ring-offset-slate-950'
           : 'ring-2 ring-transparent ring-offset-2 ring-offset-transparent hover:border-fuchsia-400/60 hover:ring-fuchsia-400/40 hover:ring-offset-slate-950'
       }`}
-      style={resolveNodeStyles(node)}
+      style={{ ...resolveNodeStyles(node), ...positionStyle }}
     >
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{node.type}</div>
       <p className="mt-2 text-sm text-slate-200">{node.name}</p>
