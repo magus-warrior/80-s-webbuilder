@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import type { Node, ProjectSummary } from '../../models';
+import type { Node, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import NodeRenderer from './NodeRenderer';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
@@ -38,15 +38,21 @@ const styleFields = [
 
 interface EditorLayoutProps {
   projects: ProjectSummary[];
+  pages: Page[];
   activeProjectId: string | null;
+  activePageId: string | null;
   onSelectProject: (projectId: string) => void;
+  onSelectPage: (pageId: string) => void;
   isLoadingProjects?: boolean;
 }
 
 export default function EditorLayout({
   projects,
+  pages,
   activeProjectId,
+  activePageId,
   onSelectProject,
+  onSelectPage,
   isLoadingProjects = false
 }: EditorLayoutProps) {
   const nodes = useEditorStore((state) => state.nodes);
@@ -125,6 +131,37 @@ export default function EditorLayout({
                         ? new Date(project.updatedAt).toLocaleDateString()
                         : '—'}
                     </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
+                Pages
+              </h3>
+              <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
+                {pages.length}
+              </span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {pages.length === 0 ? (
+                <p className="text-xs text-slate-400">No pages loaded.</p>
+              ) : (
+                pages.map((page) => (
+                  <button
+                    key={page.id}
+                    type="button"
+                    onClick={() => onSelectPage(page.id)}
+                    className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-xs transition ${
+                      page.id === activePageId
+                        ? 'border-fuchsia-300/70 bg-fuchsia-500/10 text-fuchsia-100'
+                        : 'border-slate-900/80 bg-black/60 text-slate-300 hover:border-fuchsia-400/60 hover:text-slate-100'
+                    }`}
+                  >
+                    <span className="truncate">{page.title}</span>
+                    <span className="text-[0.6rem] text-slate-500">{page.path}</span>
                   </button>
                 ))
               )}
