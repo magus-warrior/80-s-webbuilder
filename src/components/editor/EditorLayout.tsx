@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import type { Node } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import NodeRenderer from './NodeRenderer';
+import { useTheme } from './ThemeProvider';
 
 const findNodeById = (nodes: Node[], nodeId: string | null): Node | null => {
   if (!nodeId) {
@@ -38,6 +39,7 @@ export default function EditorLayout() {
   const nodes = useEditorStore((state) => state.nodes);
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
+  const { tokens, updateTokenValue, cssVariables } = useTheme();
 
   const selectedNode = useMemo(
     () => findNodeById(nodes, selectedNodeId),
@@ -98,7 +100,10 @@ export default function EditorLayout() {
               <span className="rounded-full border border-slate-700 px-2 py-1">100%</span>
             </div>
           </div>
-          <div className="flex-1 rounded-2xl border border-dashed border-fuchsia-400/60 bg-slate-950/80 p-6">
+          <div
+            className="flex-1 rounded-2xl border border-dashed border-fuchsia-400/60 bg-slate-950/80 p-6"
+            style={cssVariables}
+          >
             {nodes.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-300">
                 <p className="text-sm">Drop components here to start building.</p>
@@ -143,8 +148,8 @@ export default function EditorLayout() {
                     className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-fuchsia-400 focus:outline-none"
                     placeholder="Edit text"
                   />
-                </div>
-              )}
+              </div>
+            )}
               <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Style</p>
                 <div className="mt-3 space-y-3">
@@ -164,7 +169,34 @@ export default function EditorLayout() {
                         className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-fuchsia-400 focus:outline-none"
                       />
                     </label>
-                  ))}
+                    ))}
+                </div>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Theme</p>
+                <div className="mt-3 space-y-3">
+                  {tokens.length > 0 ? (
+                    tokens.map((token) => (
+                      <label key={token.name} className="block">
+                        <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                          {token.name}
+                        </span>
+                        <input
+                          value={token.value}
+                          onChange={(event) => updateTokenValue(token.name, event.target.value)}
+                          className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-fuchsia-400 focus:outline-none"
+                          placeholder={token.description ?? 'Theme token value'}
+                        />
+                        {token.description ? (
+                          <span className="mt-2 block text-[0.65rem] text-slate-500">
+                            {token.description}
+                          </span>
+                        ) : null}
+                      </label>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-500">No theme tokens loaded yet.</p>
+                  )}
                 </div>
               </div>
             </div>
