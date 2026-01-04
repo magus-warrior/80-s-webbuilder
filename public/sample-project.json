@@ -1,0 +1,128 @@
+{
+  "id": "project-80s",
+  "name": "Neon Landing",
+  "description": "A retro-inspired landing page configured for the 80's Webbuilder demo.",
+  "updatedAt": "2024-05-12T18:30:00Z",
+  "themeTokens": [
+    {
+      "name": "brand.neon",
+      "value": "#f72585",
+      "description": "Primary neon accent used for buttons and highlights.",
+      "category": "color"
+    },
+    {
+      "name": "surface.card",
+      "value": "#0f172a",
+      "description": "Card background surface.",
+      "category": "color"
+    },
+    {
+      "name": "font.heading",
+      "value": "'Space Grotesk', sans-serif",
+      "description": "Display typography for hero titles.",
+      "category": "font"
+    },
+    {
+      "name": "radius.lg",
+      "value": "24px",
+      "description": "Large rounded corners for panels.",
+      "category": "radius"
+    }
+  ],
+  "pages": [
+    {
+      "id": "page-home",
+      "title": "Home",
+      "path": "/",
+      "nodes": [
+        {
+          "id": "node-hero",
+          "type": "section",
+          "name": "Hero",
+          "props": {
+            "layout": "split",
+            "background": "gradient"
+          },
+          "children": [
+            {
+              "id": "node-headline",
+              "type": "text",
+              "name": "Headline",
+              "props": {
+                "content": "Build neon layouts faster"
+              }
+            },
+            {
+              "id": "node-cta",
+              "type": "button",
+              "name": "Primary CTA",
+              "props": {
+                "label": "Launch Builder",
+                "style": "primary"
+              }
+            }
+          ]
+        },
+        {
+          "id": "node-features",
+          "type": "container",
+          "name": "Feature Grid",
+          "props": {
+            "columns": "3"
+          },
+          "children": [
+            {
+              "id": "node-feature-1",
+              "type": "text",
+              "name": "Feature One",
+              "props": {
+                "content": "Retro-ready layouts"
+              }
+            },
+            {
+              "id": "node-feature-2",
+              "type": "text",
+              "name": "Feature Two",
+              "props": {
+                "content": "Component building blocks"
+              }
+            },
+            {
+              "id": "node-feature-3",
+              "type": "text",
+              "name": "Feature Three",
+              "props": {
+                "content": "Instant theming"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page-about",
+      "title": "About",
+      "path": "/about",
+      "nodes": [
+        {
+          "id": "node-story",
+          "type": "section",
+          "name": "Story",
+          "props": {
+            "background": "solid"
+          },
+          "children": [
+            {
+              "id": "node-story-text",
+              "type": "text",
+              "name": "Story Copy",
+              "props": {
+                "content": "We remix retro aesthetics with modern tooling."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
