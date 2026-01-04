@@ -33,6 +33,7 @@ export default function App() {
   const saveTimeout = useRef<number | null>(null);
   const latestProject = useRef<Project | null>(null);
   const saveRequestId = useRef(0);
+  const lastLoadedProjectId = useRef<string | null>(null);
   const projectId = 1;
 
   const buildUpdatedProject = (base: Project, nodes: Node[], tokens: ThemeToken[]): Project => ({
@@ -73,6 +74,11 @@ export default function App() {
       const matchesLatest = requestId === saveRequestId.current;
       const matchesUpdatedAt = savedProject.updatedAt === latestProject.current?.updatedAt;
       if (matchesLatest || matchesUpdatedAt) {
+        if (
+          JSON.stringify(savedProject.themeTokens ?? []) !== JSON.stringify(themeTokens)
+        ) {
+          setThemeTokens(savedProject.themeTokens ?? []);
+        }
         setProject(savedProject);
       }
     } catch (error) {
@@ -119,12 +125,14 @@ export default function App() {
   }, [previewPage, setNodes]);
 
   useEffect(() => {
-    if (project?.themeTokens) {
-      if (JSON.stringify(themeTokens) !== JSON.stringify(project.themeTokens)) {
-        setThemeTokens(project.themeTokens);
-      }
+    if (!project) {
+      return;
     }
-  }, [project, themeTokens]);
+    if (lastLoadedProjectId.current !== project.id) {
+      lastLoadedProjectId.current = project.id;
+      setThemeTokens(project.themeTokens ?? []);
+    }
+  }, [project]);
 
   useEffect(() => {
     latestProject.current = project;
