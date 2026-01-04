@@ -270,7 +270,7 @@ export default function App() {
                     </div>
                     <div className="mt-4 space-y-3">
                       {previewNodes.map((node) => (
-                        <NodeRenderer key={node.id} node={node} />
+                        <NodeRenderer key={node.id} node={node} interactive={false} />
                       ))}
                     </div>
                   </div>
