@@ -7,6 +7,7 @@ import { useEditorStore } from '../../store/editorStore';
 
 type NodeRendererProps = {
   node: Node;
+  interactive?: boolean;
 };
 
 const stylePropHandlers: Record<
@@ -87,16 +88,18 @@ const resolveNodeStyles = (node: Node): CSSProperties => {
   return style;
 };
 
-const renderChildren = (node: Node) =>
-  node.children?.map((child) => <NodeRenderer key={child.id} node={child} />) ?? null;
+const renderChildren = (node: Node, interactive: boolean) =>
+  node.children?.map((child) => (
+    <NodeRenderer key={child.id} node={child} interactive={interactive} />
+  )) ?? null;
 
-const renderTextNode = (node: Node) => (
+const renderTextNode = (node: Node, _interactive: boolean) => (
   <p style={resolveNodeStyles(node)} className="text-sm text-slate-100">
     {node.props?.content ?? node.name}
   </p>
 );
 
-const renderButtonNode = (node: Node) => (
+const renderButtonNode = (node: Node, _interactive: boolean) => (
   <button
     type="button"
     style={resolveNodeStyles(node)}
@@ -106,7 +109,7 @@ const renderButtonNode = (node: Node) => (
   </button>
 );
 
-const renderImageNode = (node: Node) => {
+const renderImageNode = (node: Node, _interactive: boolean) => {
   const src = node.props?.src;
   const alt = node.props?.alt ?? node.name;
   const style = resolveNodeStyles(node);
@@ -132,13 +135,15 @@ const renderImageNode = (node: Node) => {
   );
 };
 
-const renderContainerNode = (node: Node) => (
+const renderContainerNode = (node: Node, interactive: boolean) => (
   <div style={resolveNodeStyles(node)} className="rounded-2xl border-neon-soft bg-black/40 p-4">
-    {renderChildren(node)}
+    {renderChildren(node, interactive)}
   </div>
 );
 
-const nodeRenderers: Partial<Record<Node['type'], (node: Node) => JSX.Element>> = {
+const nodeRenderers: Partial<
+  Record<Node['type'], (node: Node, interactive: boolean) => JSX.Element>
+> = {
   text: renderTextNode,
   button: renderButtonNode,
   image: renderImageNode,
@@ -155,7 +160,7 @@ const parseLength = (value?: string) => {
 
 const toPx = (value: number) => `${Math.round(value)}px`;
 
-export default function NodeRenderer({ node }: NodeRendererProps) {
+export default function NodeRenderer({ node, interactive = true }: NodeRendererProps) {
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
@@ -168,13 +173,16 @@ export default function NodeRenderer({ node }: NodeRendererProps) {
   const renderer = nodeRenderers[node.type];
   const isSelected = selectedNodeId === node.id;
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!interactive) {
+      return;
+    }
     event.stopPropagation();
     setSelectedNodeId(node.id);
   };
   const positionStyle = useMemo(() => {
     const style: CSSProperties = {
       transform: `translate(${x}px, ${y}px)`,
-      touchAction: 'none'
+      touchAction: interactive ? 'none' : undefined
     };
 
     if (width) {
@@ -193,6 +201,9 @@ export default function NodeRenderer({ node }: NodeRendererProps) {
   }, [x, y]);
 
   useEffect(() => {
+    if (!interactive) {
+      return;
+    }
     const element = wrapperRef.current;
     if (!element) {
       return;
@@ -234,7 +245,7 @@ export default function NodeRenderer({ node }: NodeRendererProps) {
     return () => {
       interactable.unset();
     };
-  }, [node.id, updateNodeProps]);
+  }, [interactive, node.id, updateNodeProps]);
 
   if (renderer) {
     return (
@@ -242,11 +253,13 @@ export default function NodeRenderer({ node }: NodeRendererProps) {
         onClick={handleClick}
         ref={wrapperRef}
         style={positionStyle}
-        className={`cursor-pointer rounded-2xl transition ${
-          isSelected ? 'neon-ring' : 'neon-ring-hover'
-        }`}
+        className={
+          interactive
+            ? `cursor-pointer rounded-2xl transition ${isSelected ? 'neon-ring' : 'neon-ring-hover'}`
+            : 'rounded-2xl'
+        }
       >
-        {renderer(node)}
+        {renderer(node, interactive)}
       </div>
     );
   }
@@ -255,14 +268,18 @@ export default function NodeRenderer({ node }: NodeRendererProps) {
     <div
       onClick={handleClick}
       ref={wrapperRef}
-      className={`cursor-pointer rounded-2xl border border-slate-900/80 bg-black/40 p-4 transition ${
-        isSelected ? 'neon-ring' : 'neon-ring-hover'
-      }`}
+      className={
+        interactive
+          ? `cursor-pointer rounded-2xl border border-slate-900/80 bg-black/40 p-4 transition ${
+              isSelected ? 'neon-ring' : 'neon-ring-hover'
+            }`
+          : 'rounded-2xl border border-slate-900/80 bg-black/40 p-4'
+      }
       style={{ ...resolveNodeStyles(node), ...positionStyle }}
     >
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{node.type}</div>
       <p className="mt-2 text-sm text-slate-200">{node.name}</p>
-      {renderChildren(node)}
+      {renderChildren(node, interactive)}
     </div>
   );
 }
