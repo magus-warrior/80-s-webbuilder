@@ -5,15 +5,15 @@
   "updatedAt": "2024-05-12T18:30:00Z",
   "themeTokens": [
     {
-      "name": "brand.demon",
-      "value": "#f72585",
-      "description": "Primary luminous accent used for buttons and highlights.",
+      "name": "brand.neon",
+      "value": "#8b5cf6",
+      "description": "Primary nocturne accent for dark demon.beauty highlights.",
       "category": "color"
     },
     {
       "name": "surface.card",
-      "value": "#0f172a",
-      "description": "Card background surface.",
+      "value": "#0b0f1f",
+      "description": "Deep obsidian card surface for the dark theme.",
       "category": "color"
     },
     {
