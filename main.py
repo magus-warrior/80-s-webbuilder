@@ -1,23 +1,26 @@
 from datetime import datetime, timezone
 from pathlib import Path
 import re
+import shutil
 import uuid
 from typing import Any
 
-from fastapi import Body, Depends, FastAPI, HTTPException
+from fastapi import Body, Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from auth import get_current_user
 from database import get_db, init_db
-from models import Project, User
+from models import Asset, Project, User
 from routers.auth import router as auth_router
 
 app = FastAPI()
 ROOT_DIR = Path(__file__).resolve().parent
 DIST_DIR = ROOT_DIR / "dist"
 INDEX_FILE = DIST_DIR / "index.html"
+UPLOAD_DIR = ROOT_DIR / "public" / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app.include_router(auth_router)
 
@@ -25,6 +28,7 @@ app.include_router(auth_router)
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @app.get("/health")
@@ -120,6 +124,46 @@ def list_projects(
     return [serialize_project_summary(project) for project in projects]
 
 
+@app.get("/assets")
+def list_assets(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    assets = (
+        db.query(Asset)
+        .filter(Asset.owner_id == current_user.id)
+        .order_by(Asset.created_at.desc())
+        .all()
+    )
+    return [serialize_asset(asset) for asset in assets]
+
+
+@app.post("/assets", status_code=201)
+def upload_asset(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Filename is required")
+
+    extension = Path(file.filename).suffix
+    stored_name = f"{uuid.uuid4().hex}{extension}"
+    destination = UPLOAD_DIR / stored_name
+    with destination.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    asset = Asset(
+        owner_id=current_user.id,
+        url=f"/uploads/{stored_name}",
+        filename=file.filename,
+    )
+    db.add(asset)
+    db.commit()
+    db.refresh(asset)
+    return serialize_asset(asset)
+
+
 @app.post("/projects", status_code=201)
 def create_project(
     payload: dict[str, Any] = Body(...),
@@ -189,6 +233,15 @@ def serialize_project_summary(project: Project) -> dict[str, Any]:
     }
 
 
+def serialize_asset(asset: Asset) -> dict[str, Any]:
+    return {
+        "id": str(asset.id),
+        "url": asset.url,
+        "filename": asset.filename,
+        "createdAt": asset.created_at.isoformat() if asset.created_at else None,
+    }
+
+
 @app.get("/public/{slug}")
 def get_public_project(slug: str, db: Session = Depends(get_db)) -> dict[str, Any]:
     project = (
@@ -200,6 +253,8 @@ def get_public_project(slug: str, db: Session = Depends(get_db)) -> dict[str, An
         raise HTTPException(status_code=404, detail="Project not found")
     return serialize_project(project)
 
+
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 if DIST_DIR.exists():
     app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="frontend")
