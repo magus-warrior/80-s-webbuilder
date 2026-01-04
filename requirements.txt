@@ -4,5 +4,6 @@ passlib[bcrypt]
 pydantic[email]
 psycopg[binary]
 python-jose[cryptography]
+python-multipart
 sqlalchemy
 uvicorn
