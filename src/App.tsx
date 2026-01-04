@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { Project } from './models';
 import EditorLayout from './components/editor/EditorLayout';
 import NodeRenderer from './components/editor/NodeRenderer';
+import { useEditorStore } from './store/editorStore';
 
 const features = [
   {
@@ -22,7 +23,10 @@ const features = [
 export default function App() {
   const [project, setProject] = useState<Project | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const setNodes = useEditorStore((state) => state.setNodes);
+  const editorNodes = useEditorStore((state) => state.nodes);
   const previewPage = project?.pages[0];
+  const previewNodes = editorNodes.length > 0 ? editorNodes : previewPage?.nodes ?? [];
 
   useEffect(() => {
     const loadProject = async () => {
@@ -40,6 +44,12 @@ export default function App() {
 
     void loadProject();
   }, []);
+
+  useEffect(() => {
+    if (previewPage?.nodes) {
+      setNodes(previewPage.nodes);
+    }
+  }, [previewPage, setNodes]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-fuchsia-950 text-slate-100">
@@ -155,7 +165,7 @@ export default function App() {
                     </span>
                   </div>
                   <div className="mt-4 space-y-3">
-                    {previewPage?.nodes.map((node) => (
+                    {previewNodes.map((node) => (
                       <NodeRenderer key={node.id} node={node} />
                     ))}
                   </div>

@@ -1,4 +1,58 @@
+import { useMemo } from 'react';
+
+import type { Node } from '../../models';
+import { useEditorStore } from '../../store/editorStore';
+import NodeRenderer from './NodeRenderer';
+
+const findNodeById = (nodes: Node[], nodeId: string | null): Node | null => {
+  if (!nodeId) {
+    return null;
+  }
+
+  const stack = [...nodes];
+
+  while (stack.length > 0) {
+    const current = stack.shift();
+    if (!current) {
+      continue;
+    }
+    if (current.id === nodeId) {
+      return current;
+    }
+    if (current.children) {
+      stack.unshift(...current.children);
+    }
+  }
+
+  return null;
+};
+
+const styleFields = [
+  { label: 'Text color', key: 'color', placeholder: '#f8fafc' },
+  { label: 'Background', key: 'backgroundColor', placeholder: '#0f172a' },
+  { label: 'Font size', key: 'fontSize', placeholder: '16px' },
+  { label: 'Padding', key: 'padding', placeholder: '12px 16px' }
+];
+
 export default function EditorLayout() {
+  const nodes = useEditorStore((state) => state.nodes);
+  const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
+  const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
+
+  const selectedNode = useMemo(
+    () => findNodeById(nodes, selectedNodeId),
+    [nodes, selectedNodeId]
+  );
+  const textKey = selectedNode?.type === 'button' ? 'label' : 'content';
+  const textValue = selectedNode?.props?.[textKey] ?? '';
+  const handleResetStyles = () => {
+    if (!selectedNode) {
+      return;
+    }
+    const resetPayload = Object.fromEntries(styleFields.map((field) => [field.key, '']));
+    updateNodeProps(selectedNode.id, resetPayload);
+  };
+
   return (
     <section className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6 shadow-2xl shadow-slate-900/70">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
@@ -45,12 +99,20 @@ export default function EditorLayout() {
             </div>
           </div>
           <div className="flex-1 rounded-2xl border border-dashed border-fuchsia-400/60 bg-slate-950/80 p-6">
-            <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-300">
-              <p className="text-sm">Drop components here to start building.</p>
-              <button className="rounded-full bg-fuchsia-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-                Add section
-              </button>
-            </div>
+            {nodes.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-300">
+                <p className="text-sm">Drop components here to start building.</p>
+                <button className="rounded-full bg-fuchsia-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white">
+                  Add section
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {nodes.map((node) => (
+                  <NodeRenderer key={node.id} node={node} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -59,26 +121,64 @@ export default function EditorLayout() {
             <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-fuchsia-200">
               Inspector
             </h3>
-            <span className="text-xs text-slate-400">Layer 3</span>
+            <span className="text-xs text-slate-400">
+              {selectedNode ? selectedNode.name : 'No selection'}
+            </span>
           </div>
-          <div className="space-y-4 text-sm text-slate-200">
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Spacing</p>
-              <p className="mt-2">Padding: 32px</p>
-              <p>Gap: 16px</p>
+          {selectedNode ? (
+            <div className="space-y-4 text-sm text-slate-200">
+              {(selectedNode.type === 'text' || selectedNode.type === 'button') && (
+                <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Text</p>
+                  <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-slate-500">
+                    Content
+                  </label>
+                  <input
+                    value={textValue}
+                    onChange={(event) =>
+                      updateNodeProps(selectedNode.id, {
+                        [textKey]: event.target.value
+                      })
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-fuchsia-400 focus:outline-none"
+                    placeholder="Edit text"
+                  />
+                </div>
+              )}
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Style</p>
+                <div className="mt-3 space-y-3">
+                  {styleFields.map((field) => (
+                    <label key={field.key} className="block">
+                      <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                        {field.label}
+                      </span>
+                      <input
+                        value={selectedNode.props?.[field.key] ?? ''}
+                        onChange={(event) =>
+                          updateNodeProps(selectedNode.id, {
+                            [field.key]: event.target.value
+                          })
+                        }
+                        placeholder={field.placeholder}
+                        className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-fuchsia-400 focus:outline-none"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Typography</p>
-              <p className="mt-2">Heading: 32px / 600</p>
-              <p>Body: 16px / 400</p>
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-800/80 bg-slate-950/40 p-4 text-xs uppercase tracking-[0.2em] text-slate-400">
+              Select a node on the canvas to edit its text and styles.
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Effects</p>
-              <p className="mt-2">Glow: Fuchsia 40%</p>
-              <p>Shadow: Soft</p>
-            </div>
-          </div>
-          <button className="mt-auto rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 transition hover:border-fuchsia-400/60 hover:text-white">
+          )}
+          <button
+            className="mt-auto rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 transition hover:border-fuchsia-400/60 hover:text-white"
+            onClick={handleResetStyles}
+            type="button"
+            disabled={!selectedNodeId}
+          >
             Reset styles
           </button>
         </aside>
