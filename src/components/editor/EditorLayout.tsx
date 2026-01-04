@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, type ChangeEvent } from 'react';
 
-import type { Node, Page, ProjectSummary } from '../../models';
+import type { Asset, Node, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import NodeRenderer from './NodeRenderer';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
@@ -41,6 +41,11 @@ interface EditorLayoutProps {
   pages: Page[];
   activeProjectId: string | null;
   activePageId: string | null;
+  assets: Asset[];
+  isLoadingAssets?: boolean;
+  isUploadingAsset?: boolean;
+  assetError?: string | null;
+  onUploadAsset: (file: File) => Promise<Asset | null>;
   onSelectProject: (projectId: string) => void;
   onSelectPage: (pageId: string) => void;
   isLoadingProjects?: boolean;
@@ -51,6 +56,11 @@ export default function EditorLayout({
   pages,
   activeProjectId,
   activePageId,
+  assets,
+  isLoadingAssets = false,
+  isUploadingAsset = false,
+  assetError = null,
+  onUploadAsset,
   onSelectProject,
   onSelectPage,
   isLoadingProjects = false
@@ -80,6 +90,29 @@ export default function EditorLayout({
       return;
     }
     addNode(buildNodeFromTemplate(template));
+  };
+  const handleAssetSelect = (asset: Asset) => {
+    if (!selectedNode) {
+      return;
+    }
+    updateNodeProps(selectedNode.id, {
+      src: asset.url,
+      alt: asset.filename
+    });
+  };
+  const handleAssetUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    const uploaded = await onUploadAsset(file);
+    if (uploaded && selectedNode) {
+      updateNodeProps(selectedNode.id, {
+        src: uploaded.url,
+        alt: uploaded.filename
+      });
+    }
+    event.target.value = '';
   };
 
   return (
@@ -279,6 +312,64 @@ export default function EditorLayout({
                   ))}
                 </div>
               </div>
+              {selectedNode.type === 'image' && (
+                <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Assets</p>
+                  <div className="mt-3 space-y-3">
+                    <label className="block">
+                      <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                        Upload image
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAssetUpload}
+                        disabled={isUploadingAsset}
+                        className="mt-2 block w-full text-xs text-slate-300 file:mr-3 file:rounded-full file:border-0 file:bg-neon-gradient file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-950 file:shadow-lg file:neon-glow-soft disabled:opacity-60"
+                      />
+                    </label>
+                    {assetError ? (
+                      <p className="text-xs text-rose-300">Error: {assetError}</p>
+                    ) : null}
+                    {isLoadingAssets ? (
+                      <p className="text-xs text-slate-500">Loading assets...</p>
+                    ) : assets.length === 0 ? (
+                      <p className="text-xs text-slate-500">No assets uploaded yet.</p>
+                    ) : (
+                      <div className="grid gap-2">
+                        {assets.map((asset) => (
+                          <button
+                            key={asset.id}
+                            type="button"
+                            onClick={() => handleAssetSelect(asset)}
+                            className={`flex items-center gap-3 rounded-lg border px-2 py-2 text-left text-xs transition ${
+                              asset.url === selectedNode.props?.src
+                                ? 'border-cyan-300/70 bg-cyan-500/10 text-cyan-100'
+                                : 'border-slate-800/80 bg-black/60 text-slate-300 hover:border-cyan-400/60'
+                            }`}
+                          >
+                            <img
+                              src={asset.url}
+                              alt={asset.filename}
+                              className="h-10 w-10 rounded-md border border-slate-800 object-cover"
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-semibold text-slate-100">
+                                {asset.filename}
+                              </p>
+                              <p className="text-[0.6rem] text-slate-500">
+                                {asset.createdAt
+                                  ? new Date(asset.createdAt).toLocaleString()
+                                  : '—'}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Theme</p>
                 <div className="mt-3 space-y-3">

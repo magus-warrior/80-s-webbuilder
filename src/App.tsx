@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import type { Node, Project, ProjectSummary, ThemeToken } from './models';
+import type { Asset, Node, Project, ProjectSummary, ThemeToken } from './models';
 import AuthScreen from './components/auth/AuthScreen';
 import EditorLayout from './components/editor/EditorLayout';
 import NodeRenderer from './components/editor/NodeRenderer';
@@ -33,6 +33,10 @@ export default function App() {
   const [themeTokens, setThemeTokens] = useState<ThemeToken[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+  const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+  const [assetError, setAssetError] = useState<string | null>(null);
   const authToken = useAuthStore((state) => state.token);
   const authEmail = useAuthStore((state) => state.email);
   const clearAuth = useAuthStore((state) => state.clearAuth);
@@ -185,6 +189,8 @@ export default function App() {
       setProjectList([]);
       setActiveProjectId(null);
       setIsLoadingProjects(false);
+      setAssets([]);
+      setAssetError(null);
       return;
     }
 
@@ -250,6 +256,32 @@ export default function App() {
   }, [authToken]);
 
   useEffect(() => {
+    if (!authToken) {
+      return;
+    }
+    const loadAssets = async () => {
+      setIsLoadingAssets(true);
+      setAssetError(null);
+      try {
+        const response = await fetch('/assets', {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (!response.ok) {
+          throw new Error(`Asset list failed: ${response.status}`);
+        }
+        const data = (await response.json()) as Asset[];
+        setAssets(data);
+      } catch (error) {
+        setAssetError(error instanceof Error ? error.message : 'Unknown error');
+      } finally {
+        setIsLoadingAssets(false);
+      }
+    };
+
+    void loadAssets();
+  }, [authToken]);
+
+  useEffect(() => {
     if (!authToken || !activeProjectId) {
       return;
     }
@@ -283,6 +315,38 @@ export default function App() {
       setProject(null);
       setProjectList([]);
       setActiveProjectId(null);
+      setAssets([]);
+      setAssetError(null);
+    }
+  };
+
+  const handleAssetUpload = async (file: File) => {
+    if (!authToken) {
+      return null;
+    }
+    setIsUploadingAsset(true);
+    setAssetError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/assets', {
+        method: 'POST',
+        headers: {
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        },
+        body: formData
+      });
+      if (!response.ok) {
+        throw new Error(`Asset upload failed: ${response.status}`);
+      }
+      const uploaded = (await response.json()) as Asset;
+      setAssets((prev) => [uploaded, ...prev]);
+      return uploaded;
+    } catch (error) {
+      setAssetError(error instanceof Error ? error.message : 'Unknown error');
+      return null;
+    } finally {
+      setIsUploadingAsset(false);
     }
   };
 
@@ -400,6 +464,11 @@ export default function App() {
             pages={project?.pages ?? []}
             activeProjectId={activeProjectId}
             activePageId={resolvedPageId}
+            assets={assets}
+            isLoadingAssets={isLoadingAssets}
+            isUploadingAsset={isUploadingAsset}
+            assetError={assetError}
+            onUploadAsset={handleAssetUpload}
             onSelectProject={(projectId) => {
               setActiveProjectId(projectId);
               updateProjectRoute(projectId);
