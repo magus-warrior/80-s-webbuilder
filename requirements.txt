@@ -1,6 +1,7 @@
 fastapi
 gunicorn
 passlib[bcrypt]
+pydantic[email]
 psycopg[binary]
 python-jose[cryptography]
 sqlalchemy
