@@ -5,7 +5,9 @@ import type { Node } from '../models';
 type EditorState = {
   nodes: Node[];
   selectedNodeId: string | null;
+  currentPageId: string | null;
   setSelectedNodeId: (nodeId: string | null) => void;
+  setCurrentPageId: (pageId: string | null) => void;
   setNodes: (nodes: Node[]) => void;
   updateNodeProps: (nodeId: string, updates: Record<string, string>) => void;
   addNode: (node: Node) => void;
@@ -72,7 +74,9 @@ const addNodeToTree = (nodes: Node[], containerId: string, nodeToAdd: Node): Nod
 export const useEditorStore = create<EditorState>((set) => ({
   nodes: [],
   selectedNodeId: null,
+  currentPageId: null,
   setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
+  setCurrentPageId: (pageId) => set({ currentPageId: pageId, selectedNodeId: null }),
   setNodes: (nodes) => set({ nodes }),
   updateNodeProps: (nodeId, updates) =>
     set((state) => ({

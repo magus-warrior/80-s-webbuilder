@@ -38,7 +38,11 @@ export default function App() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const setNodes = useEditorStore((state) => state.setNodes);
   const editorNodes = useEditorStore((state) => state.nodes);
-  const previewPage = project?.pages[0];
+  const currentPageId = useEditorStore((state) => state.currentPageId);
+  const setCurrentPageId = useEditorStore((state) => state.setCurrentPageId);
+  const resolvedPageId = currentPageId ?? project?.pages[0]?.id ?? null;
+  const previewPage =
+    project?.pages.find((page) => page.id === resolvedPageId) ?? project?.pages[0];
   const previewNodes = editorNodes.length > 0 ? editorNodes : previewPage?.nodes ?? [];
   const saveTimeout = useRef<number | null>(null);
   const latestProject = useRef<Project | null>(null);
@@ -57,22 +61,39 @@ export default function App() {
     }
   };
 
-  const buildUpdatedProject = (base: Project, nodes: Node[], tokens: ThemeToken[]): Project => ({
-    ...base,
-    updatedAt: new Date().toISOString(),
-    themeTokens: tokens,
-    pages: base.pages.map((page, index) =>
-      index === 0
-        ? {
-            ...page,
-            nodes
-          }
-        : page
-    )
-  });
+  const buildUpdatedProject = (
+    base: Project,
+    nodes: Node[],
+    tokens: ThemeToken[],
+    pageId: string | null
+  ): Project => {
+    const targetPageId = pageId ?? base.pages[0]?.id ?? null;
+    return {
+      ...base,
+      updatedAt: new Date().toISOString(),
+      themeTokens: tokens,
+      pages: base.pages.map((page) =>
+        page.id === targetPageId
+          ? {
+              ...page,
+              nodes
+            }
+          : page
+      )
+    };
+  };
 
-  const hasProjectChanges = (base: Project, nodes: Node[], tokens: ThemeToken[]) => {
-    const baseNodes = base.pages[0]?.nodes ?? [];
+  const hasProjectChanges = (
+    base: Project,
+    nodes: Node[],
+    tokens: ThemeToken[],
+    pageId: string | null
+  ) => {
+    const basePage = base.pages.find((page) => page.id === pageId) ?? base.pages[0];
+    if (!basePage) {
+      return false;
+    }
+    const baseNodes = basePage.nodes ?? [];
     const nodesMatch = JSON.stringify(baseNodes) === JSON.stringify(nodes);
     const tokensMatch = JSON.stringify(base.themeTokens ?? []) === JSON.stringify(tokens);
     return !(nodesMatch && tokensMatch);
@@ -282,11 +303,17 @@ export default function App() {
     if (!project) {
       return;
     }
+    const pageExists =
+      currentPageId && project.pages.some((page) => page.id === currentPageId);
+    const nextPageId = pageExists ? currentPageId : project.pages[0]?.id ?? null;
+    if (nextPageId !== currentPageId) {
+      setCurrentPageId(nextPageId);
+    }
     if (lastLoadedProjectId.current !== project.id) {
       lastLoadedProjectId.current = project.id;
       setThemeTokens(project.themeTokens ?? []);
     }
-  }, [project]);
+  }, [currentPageId, project, setCurrentPageId]);
 
   useEffect(() => {
     latestProject.current = project;
@@ -298,11 +325,16 @@ export default function App() {
       return;
     }
 
-    if (!hasProjectChanges(baseProject, editorNodes, themeTokens)) {
+    if (!hasProjectChanges(baseProject, editorNodes, themeTokens, resolvedPageId)) {
       return;
     }
 
-    const nextProject = buildUpdatedProject(baseProject, editorNodes, themeTokens);
+    const nextProject = buildUpdatedProject(
+      baseProject,
+      editorNodes,
+      themeTokens,
+      resolvedPageId
+    );
     setProject(nextProject);
 
     if (saveTimeout.current) {
@@ -317,7 +349,7 @@ export default function App() {
         window.clearTimeout(saveTimeout.current);
       }
     };
-  }, [editorNodes, themeTokens]);
+  }, [editorNodes, resolvedPageId, themeTokens]);
 
   return (
     <ThemeProvider tokens={themeTokens} onTokensChange={setThemeTokens}>
@@ -365,10 +397,15 @@ export default function App() {
 
           <EditorLayout
             projects={projectList}
+            pages={project?.pages ?? []}
             activeProjectId={activeProjectId}
+            activePageId={resolvedPageId}
             onSelectProject={(projectId) => {
               setActiveProjectId(projectId);
               updateProjectRoute(projectId);
+            }}
+            onSelectPage={(pageId) => {
+              setCurrentPageId(pageId);
             }}
             isLoadingProjects={isLoadingProjects}
           />
