@@ -1,12 +1,18 @@
+from pathlib import Path
 from typing import Any
 
 from fastapi import Body, Depends, FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from database import get_db, init_db
 from models import Project
 
 app = FastAPI()
+ROOT_DIR = Path(__file__).resolve().parent
+DIST_DIR = ROOT_DIR / "dist"
+INDEX_FILE = DIST_DIR / "index.html"
 
 
 @app.on_event("startup")
@@ -20,7 +26,9 @@ def health() -> dict:
 
 
 @app.get("/")
-def root() -> dict:
+def root() -> dict | FileResponse:
+    if INDEX_FILE.exists():
+        return FileResponse(INDEX_FILE)
     return {"status": "ok"}
 
 
@@ -55,3 +63,7 @@ def update_project(
     if "id" not in data:
         data = {**data, "id": str(project.id)}
     return data
+
+
+if DIST_DIR.exists():
+    app.mount("/", StaticFiles(directory=DIST_DIR, html=True), name="frontend")
