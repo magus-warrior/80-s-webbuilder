@@ -19,6 +19,11 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/")
+def root() -> dict:
+    return {"status": "ok"}
+
+
 @app.get("/projects/{project_id}")
 def get_project(project_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
     project = db.query(Project).filter(Project.id == project_id).first()
