@@ -6,7 +6,6 @@ After=network.target
 Type=simple
 WorkingDirectory=@ROOT_DIR@
 ExecStart=@ROOT_DIR@/start.sh
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=on-failure
 
 [Install]
