@@ -9,11 +9,11 @@ import { useEditorStore } from './store/editorStore';
 const features = [
   {
     title: 'Ritual-ready layouts',
-    description: 'Grid-based sections with obsidian gradients and luminous accents.'
+    description: 'Grid-based sections draped in midnight gradients and violet accents.'
   },
   {
     title: 'Modular relics',
-    description: 'Reusable cards, buttons, and status badges for quick conjuring.'
+    description: 'Reusable cards, buttons, and status badges for shadowy compositions.'
   },
   {
     title: 'Instant aura shifts',
@@ -153,29 +153,29 @@ export default function App() {
 
   return (
     <ThemeProvider tokens={themeTokens} onTokensChange={setThemeTokens}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-fuchsia-950 text-slate-100">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950 text-slate-100">
         <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-16 px-6 py-12">
-          <header className="flex flex-col gap-6 rounded-3xl border border-fuchsia-500/30 bg-slate-900/70 p-10 shadow-xl shadow-fuchsia-500/10">
+          <header className="flex flex-col gap-6 rounded-3xl border border-violet-500/30 bg-slate-900/70 p-10 shadow-xl shadow-violet-500/10">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-fuchsia-300">demon.beauty</p>
+                <p className="text-sm uppercase tracking-[0.3em] text-violet-300">demon.beauty</p>
                 <h1 className="mt-4 text-4xl font-semibold text-white sm:text-5xl">
                   demon.beauty
                 </h1>
               </div>
-              <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-fuchsia-200">
+              <span className="rounded-full border border-violet-400/40 bg-violet-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-violet-200">
                 Ritual Ready
               </span>
             </div>
             <p className="max-w-2xl text-lg text-slate-200">
-              This layout confirms demon.beauty styling is live. The obsidian gradient, glassy card, and
-              glowing buttons are all Tailwind-powered.
+              This layout confirms demon.beauty styling is live. The obsidian gradient, shadowed cards, and
+              violet-accented buttons are all Tailwind-powered.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="rounded-full bg-fuchsia-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/40 transition hover:translate-y-0.5 hover:bg-fuchsia-400">
+              <button className="rounded-full bg-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/40 transition hover:translate-y-0.5 hover:bg-violet-400">
                 Enter Studio
               </button>
-              <button className="rounded-full border border-slate-500 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-fuchsia-400 hover:text-white">
+              <button className="rounded-full border border-slate-500 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-violet-400 hover:text-white">
                 Browse Rituals
               </button>
             </div>
@@ -198,7 +198,7 @@ export default function App() {
           <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-lg shadow-slate-900/60">
             <div className="flex flex-wrap items-start justify-between gap-6">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-fuchsia-300">Local JSON</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-violet-300">Local JSON</p>
                 <h2 className="mt-3 text-2xl font-semibold text-white">
                   {project ? project.name : 'Loading project...'}
                 </h2>
@@ -223,7 +223,7 @@ export default function App() {
             {project ? (
               <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-fuchsia-200">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-violet-200">
                     Pages & Nodes
                   </h3>
                   <div className="space-y-4">
@@ -234,7 +234,7 @@ export default function App() {
                             <p className="text-sm font-semibold text-white">{page.title}</p>
                             <p className="text-xs text-slate-400">{page.path}</p>
                           </div>
-                          <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-3 py-1 text-xs text-fuchsia-200">
+                          <span className="rounded-full border border-violet-400/40 bg-violet-500/10 px-3 py-1 text-xs text-violet-200">
                             {page.nodes.length} nodes
                           </span>
                         </div>
@@ -276,7 +276,7 @@ export default function App() {
                   </div>
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-fuchsia-200">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-violet-200">
                     Theme Tokens
                   </h3>
                   <div className="space-y-3">
@@ -309,8 +309,8 @@ export default function App() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="h-3 w-3 rounded-full bg-emerald-400 shadow shadow-emerald-400/60" />
-                <span className="text-xs uppercase tracking-[0.2em] text-emerald-200">Live Styles</span>
+                <span className="h-3 w-3 rounded-full bg-violet-400 shadow shadow-violet-400/60" />
+                <span className="text-xs uppercase tracking-[0.2em] text-violet-200">Live Styles</span>
               </div>
             </div>
           </section>
