@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { Node, Project, ThemeToken } from './models';
+import AuthScreen from './components/auth/AuthScreen';
 import EditorLayout from './components/editor/EditorLayout';
 import NodeRenderer from './components/editor/NodeRenderer';
 import { ThemeProvider } from './components/editor/ThemeProvider';
+import { useAuthStore } from './store/authStore';
 import { useEditorStore } from './store/editorStore';
 
 const features = [
@@ -26,6 +28,9 @@ export default function App() {
   const [projectError, setProjectError] = useState<string | null>(null);
   const [themeTokens, setThemeTokens] = useState<ThemeToken[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const authToken = useAuthStore((state) => state.token);
+  const authEmail = useAuthStore((state) => state.email);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const setNodes = useEditorStore((state) => state.setNodes);
   const editorNodes = useEditorStore((state) => state.nodes);
   const previewPage = project?.pages[0];
@@ -64,7 +69,10 @@ export default function App() {
     try {
       const response = await fetch(`/projects/${projectId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        },
         body: JSON.stringify(nextProject)
       });
       if (!response.ok) {
@@ -91,11 +99,13 @@ export default function App() {
   useEffect(() => {
     const loadProject = async () => {
       try {
-        const response = await fetch(`/projects/${projectId}`);
-        if (response.ok) {
-          const data = (await response.json()) as Project;
-          setProject(data);
-          return;
+      const response = await fetch(`/projects/${projectId}`, {
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+      });
+      if (response.ok) {
+        const data = (await response.json()) as Project;
+        setProject(data);
+        return;
         }
         if (response.status !== 404) {
           throw new Error(`Request failed: ${response.status}`);
@@ -113,7 +123,19 @@ export default function App() {
     };
 
     void loadProject();
-  }, []);
+  }, [authToken]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/auth/logout', { method: 'POST' });
+    } finally {
+      clearAuth();
+    }
+  };
+
+  if (!authToken) {
+    return <AuthScreen />;
+  }
 
   useEffect(() => {
     if (previewPage?.nodes) {
@@ -176,10 +198,24 @@ export default function App() {
                 <h1 className="mt-4 text-4xl font-semibold text-white sm:text-5xl">
                   Studio Site Builder
                 </h1>
+                {authEmail ? (
+                  <p className="mt-2 text-xs uppercase tracking-[0.25em] text-slate-400">
+                    Signed in as {authEmail}
+                  </p>
+                ) : null}
               </div>
-              <span className="rounded-full border-neon px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-100 neon-glow-soft">
-                Template Ready
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="rounded-full border-neon px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-100 neon-glow-soft">
+                  Template Ready
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="rounded-full border-neon-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-200 transition hover:brightness-110"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
             <p className="max-w-2xl text-lg text-slate-200">
               This layout confirms studio-grade styling is live. The obsidian gradient, soft shadowed cards,
