@@ -255,7 +255,9 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
         style={positionStyle}
         className={
           interactive
-            ? `cursor-pointer rounded-2xl transition ${isSelected ? 'neon-ring' : 'neon-ring-hover'}`
+            ? `cursor-pointer rounded-2xl transition-shadow ${
+                isSelected ? 'neon-ring' : 'neon-ring-hover'
+              }`
             : 'rounded-2xl'
         }
       >
@@ -270,7 +272,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
       ref={wrapperRef}
       className={
         interactive
-          ? `cursor-pointer rounded-2xl border border-slate-900/80 bg-black/40 p-4 transition ${
+          ? `cursor-pointer rounded-2xl border border-slate-900/80 bg-black/40 p-4 transition-shadow ${
               isSelected ? 'neon-ring' : 'neon-ring-hover'
             }`
           : 'rounded-2xl border border-slate-900/80 bg-black/40 p-4'
