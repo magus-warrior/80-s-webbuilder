@@ -6,6 +6,17 @@
 
 :root {
   color-scheme: dark;
+  --neon-cyan: #22d3ee;
+  --neon-magenta: #f472b6;
+  --neon-lime: #a3e635;
+  --neon-blue: #38bdf8;
+  --neon-gradient: linear-gradient(
+    135deg,
+    var(--neon-cyan),
+    var(--neon-magenta),
+    var(--neon-lime),
+    var(--neon-blue)
+  );
 }
 
 body {
@@ -15,4 +26,57 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+@layer utilities {
+  .bg-neon-gradient {
+    background-image: var(--neon-gradient);
+  }
+
+  .border-neon {
+    border: 1px solid transparent;
+    background: linear-gradient(#050507, #0b0b12) padding-box,
+      var(--neon-gradient) border-box;
+  }
+
+  .border-neon-soft {
+    border: 1px solid transparent;
+    background: linear-gradient(#08080d, #11111a) padding-box,
+      linear-gradient(
+          135deg,
+          rgba(34, 211, 238, 0.55),
+          rgba(244, 114, 182, 0.55),
+          rgba(163, 230, 53, 0.55),
+          rgba(56, 189, 248, 0.55)
+        )
+        border-box;
+  }
+
+  .neon-glow {
+    box-shadow:
+      0 0 18px rgba(34, 211, 238, 0.35),
+      0 0 32px rgba(244, 114, 182, 0.25),
+      0 0 40px rgba(163, 230, 53, 0.2);
+  }
+
+  .neon-glow-soft {
+    box-shadow:
+      0 0 10px rgba(34, 211, 238, 0.25),
+      0 0 20px rgba(244, 114, 182, 0.2),
+      0 0 24px rgba(56, 189, 248, 0.18);
+  }
+
+  .neon-ring {
+    box-shadow:
+      0 0 0 2px rgba(34, 211, 238, 0.7),
+      0 0 0 4px rgba(244, 114, 182, 0.5),
+      0 0 12px rgba(163, 230, 53, 0.35);
+  }
+
+  .neon-ring-hover:hover {
+    box-shadow:
+      0 0 0 2px rgba(34, 211, 238, 0.4),
+      0 0 0 4px rgba(244, 114, 182, 0.3),
+      0 0 10px rgba(56, 189, 248, 0.3);
+  }
 }
