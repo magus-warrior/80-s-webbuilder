@@ -1,3 +1,7 @@
+import { useEffect, useState } from 'react';
+
+import type { Project } from './models';
+
 const features = [
   {
     title: 'Retro-ready layouts',
@@ -14,6 +18,26 @@ const features = [
 ];
 
 export default function App() {
+  const [project, setProject] = useState<Project | null>(null);
+  const [projectError, setProjectError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadProject = async () => {
+      try {
+        const response = await fetch('/sample-project.json');
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status}`);
+        }
+        const data = (await response.json()) as Project;
+        setProject(data);
+      } catch (error) {
+        setProjectError(error instanceof Error ? error.message : 'Unknown error');
+      }
+    };
+
+    void loadProject();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-fuchsia-950 text-slate-100">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-16 px-6 py-12">
@@ -54,6 +78,90 @@ export default function App() {
             </article>
           ))}
         </main>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-lg shadow-slate-900/60">
+          <div className="flex flex-wrap items-start justify-between gap-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-fuchsia-300">Local JSON</p>
+              <h2 className="mt-3 text-2xl font-semibold text-white">
+                {project ? project.name : 'Loading project...'}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-slate-300">
+                {project?.description ??
+                  'Fetching the sample JSON to render pages, nodes, and theme tokens.'}
+              </p>
+              {projectError ? (
+                <p className="mt-3 text-sm text-rose-300">Error: {projectError}</p>
+              ) : null}
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 px-6 py-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Last updated</p>
+              <p className="mt-2 text-sm text-slate-200">
+                {project ? new Date(project.updatedAt).toLocaleString() : '—'}
+              </p>
+            </div>
+          </div>
+          {project ? (
+            <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-fuchsia-200">
+                  Pages & Nodes
+                </h3>
+                <div className="space-y-4">
+                  {project.pages.map((page) => (
+                    <div key={page.id} className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-white">{page.title}</p>
+                          <p className="text-xs text-slate-400">{page.path}</p>
+                        </div>
+                        <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-3 py-1 text-xs text-fuchsia-200">
+                          {page.nodes.length} nodes
+                        </span>
+                      </div>
+                      <ul className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-2">
+                        {page.nodes.map((node) => (
+                          <li key={node.id} className="rounded-lg border border-slate-800 bg-slate-900/70 p-2">
+                            <p className="font-semibold text-slate-100">{node.name}</p>
+                            <p className="text-[0.7rem] uppercase tracking-[0.2em] text-slate-400">
+                              {node.type}
+                            </p>
+                            {node.children ? (
+                              <p className="mt-1 text-[0.7rem] text-slate-400">
+                                {node.children.length} child nodes
+                              </p>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-fuchsia-200">
+                  Theme Tokens
+                </h3>
+                <div className="space-y-3">
+                  {project.themeTokens.map((token) => (
+                    <div
+                      key={token.name}
+                      className="flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-white">{token.name}</p>
+                        <p className="text-xs text-slate-400">{token.description}</p>
+                      </div>
+                      <span className="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-xs text-slate-200">
+                        {token.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </section>
 
         <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-8">
           <div className="flex flex-wrap items-center justify-between gap-6">
