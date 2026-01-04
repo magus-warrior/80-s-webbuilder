@@ -25,6 +25,15 @@ require_cmd python
 
 cd "$ROOT_DIR"
 
+python_cmd="python"
+if command -v uvicorn >/dev/null 2>&1; then
+  uvicorn_path_existing="$(command -v uvicorn)"
+  uvicorn_bin_dir="$(dirname "$uvicorn_path_existing")"
+  if [ -x "$uvicorn_bin_dir/python" ]; then
+    python_cmd="$uvicorn_bin_dir/python"
+  fi
+fi
+
 if ! command -v psql >/dev/null 2>&1; then
   if command -v apt-get >/dev/null 2>&1; then
     echo "Installing PostgreSQL (apt-get)..."
@@ -49,15 +58,15 @@ sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='fastapi_app
   || sudo -u postgres createdb -O postgres fastapi_app
 
 echo "Installing backend dependencies (requirements.txt)..."
-python -m pip install -r requirements.txt
+"$python_cmd" -m pip install -r requirements.txt
 
-if ! command -v uvicorn >/dev/null 2>&1; then
+uvicorn_path="$("$python_cmd" -c "import shutil; print(shutil.which('uvicorn') or '')")"
+if [ -z "$uvicorn_path" ]; then
   echo "Error: uvicorn is not available after dependency install." >&2
   echo "Ensure it is listed in requirements.txt or install it with pip." >&2
   exit 1
 fi
 
-uvicorn_path="$(command -v uvicorn)"
 start_tmp="$(mktemp)"
 sed "s|@UVICORN_PATH@|$uvicorn_path|g" "$ROOT_DIR/start.sh" > "$start_tmp"
 mv "$start_tmp" "$ROOT_DIR/start.sh"
