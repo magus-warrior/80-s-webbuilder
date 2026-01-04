@@ -8,15 +8,15 @@ import { useEditorStore } from './store/editorStore';
 
 const features = [
   {
-    title: 'Ritual-ready layouts',
-    description: 'Grid-based sections draped in midnight gradients and violet accents.'
+    title: 'Studio-ready layouts',
+    description: 'Grid-based sections framed with luxe gradients and refined accents.'
   },
   {
-    title: 'Modular relics',
-    description: 'Reusable cards, buttons, and status badges for shadowy compositions.'
+    title: 'Modular templates',
+    description: 'Reusable cards, buttons, and status badges for polished compositions.'
   },
   {
-    title: 'Instant aura shifts',
+    title: 'Instant palette shifts',
     description: 'Swap palettes with Tailwind utility classes and CSS variables.'
   }
 ];
@@ -158,25 +158,25 @@ export default function App() {
           <header className="flex flex-col gap-6 rounded-3xl border border-violet-500/30 bg-slate-900/70 p-10 shadow-xl shadow-violet-500/10">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-violet-300">demon.beauty</p>
+                <p className="text-sm uppercase tracking-[0.3em] text-violet-300">Studio Suite</p>
                 <h1 className="mt-4 text-4xl font-semibold text-white sm:text-5xl">
-                  demon.beauty
+                  Studio Site Builder
                 </h1>
               </div>
               <span className="rounded-full border border-violet-400/40 bg-violet-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-violet-200">
-                Ritual Ready
+                Template Ready
               </span>
             </div>
             <p className="max-w-2xl text-lg text-slate-200">
-              This layout confirms demon.beauty styling is live. The obsidian gradient, shadowed cards, and
-              violet-accented buttons are all Tailwind-powered.
+              This layout confirms studio-grade styling is live. The obsidian gradient, soft shadowed cards,
+              and refined accents are all Tailwind-powered.
             </p>
             <div className="flex flex-wrap gap-4">
               <button className="rounded-full bg-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/40 transition hover:translate-y-0.5 hover:bg-violet-400">
-                Enter Studio
+                Open Studio
               </button>
               <button className="rounded-full border border-slate-500 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-violet-400 hover:text-white">
-                Browse Rituals
+                Explore Templates
               </button>
             </div>
           </header>
@@ -303,9 +303,9 @@ export default function App() {
           <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-8">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div>
-                <h3 className="text-xl font-semibold text-white">Ready to summon?</h3>
+                <h3 className="text-xl font-semibold text-white">Ready to publish?</h3>
                 <p className="mt-2 text-sm text-slate-300">
-                  Tailwind styles are now wired up for your next spellbound layout.
+                  Tailwind styles are now wired up for your next elegant layout.
                 </p>
               </div>
               <div className="flex items-center gap-3">
