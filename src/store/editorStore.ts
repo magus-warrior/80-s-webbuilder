@@ -8,6 +8,8 @@ type EditorState = {
   setSelectedNodeId: (nodeId: string | null) => void;
   setNodes: (nodes: Node[]) => void;
   updateNodeProps: (nodeId: string, updates: Record<string, string>) => void;
+  addNode: (node: Node) => void;
+  addNodeToContainer: (containerId: string, node: Node) => void;
 };
 
 const updateNodeTree = (
@@ -36,6 +38,37 @@ const updateNodeTree = (
     };
   });
 
+const addNodeToTree = (nodes: Node[], containerId: string, nodeToAdd: Node): Node[] => {
+  let didInsert = false;
+  const nextNodes = nodes.map((node) => {
+    if (node.id === containerId) {
+      didInsert = true;
+      return {
+        ...node,
+        children: [...(node.children ?? []), nodeToAdd]
+      };
+    }
+
+    if (!node.children) {
+      return node;
+    }
+
+    const nextChildren = addNodeToTree(node.children, containerId, nodeToAdd);
+
+    if (nextChildren === node.children) {
+      return node;
+    }
+
+    didInsert = true;
+    return {
+      ...node,
+      children: nextChildren
+    };
+  });
+
+  return didInsert ? nextNodes : nodes;
+};
+
 export const useEditorStore = create<EditorState>((set) => ({
   nodes: [],
   selectedNodeId: null,
@@ -50,5 +83,15 @@ export const useEditorStore = create<EditorState>((set) => ({
           ...updates
         }
       }))
+    })),
+  addNode: (node) =>
+    set((state) => ({
+      nodes: [...state.nodes, node],
+      selectedNodeId: node.id
+    })),
+  addNodeToContainer: (containerId, node) =>
+    set((state) => ({
+      nodes: addNodeToTree(state.nodes, containerId, node),
+      selectedNodeId: node.id
     }))
 }));

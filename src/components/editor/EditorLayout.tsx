@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import type { Node, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import NodeRenderer from './NodeRenderer';
+import { blockTemplates, buildNodeFromTemplate } from './templates';
 import { useTheme } from './ThemeProvider';
 
 const findNodeById = (nodes: Node[], nodeId: string | null): Node | null => {
@@ -51,6 +52,7 @@ export default function EditorLayout({
   const nodes = useEditorStore((state) => state.nodes);
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
+  const addNode = useEditorStore((state) => state.addNode);
   const { tokens, updateTokenValue, cssVariables } = useTheme();
 
   const selectedNode = useMemo(
@@ -65,6 +67,13 @@ export default function EditorLayout({
     }
     const resetPayload = Object.fromEntries(styleFields.map((field) => [field.key, '']));
     updateNodeProps(selectedNode.id, resetPayload);
+  };
+  const handleAddBlock = (templateName: string) => {
+    const template = blockTemplates.find((item) => item.key === templateName)?.template;
+    if (!template) {
+      return;
+    }
+    addNode(buildNodeFromTemplate(template));
   };
 
   return (
@@ -130,12 +139,14 @@ export default function EditorLayout({
             </span>
           </div>
           <div className="space-y-3">
-            {['Hero', 'Gallery', 'Pricing', 'Testimonials'].map((block) => (
+            {blockTemplates.map((block) => (
               <button
-                key={block}
+                key={block.key}
+                type="button"
+                onClick={() => handleAddBlock(block.key)}
                 className="flex w-full items-center justify-between rounded-xl border border-slate-900/80 bg-black/60 px-3 py-2 text-left text-sm text-slate-200 transition hover:border-transparent hover:bg-neon-gradient hover:text-slate-950 hover:neon-glow-soft"
               >
-                <span>{block}</span>
+                <span>{block.label}</span>
                 <span className="text-xs text-slate-400">+ add</span>
               </button>
             ))}
@@ -162,7 +173,11 @@ export default function EditorLayout({
             {nodes.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-300">
                 <p className="text-sm">Drop components here to start building.</p>
-                <button className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 neon-glow-soft">
+                <button
+                  type="button"
+                  onClick={() => handleAddBlock('Hero')}
+                  className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 neon-glow-soft"
+                >
                   Add section
                 </button>
               </div>
