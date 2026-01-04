@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import type { Node } from '../../models';
+import type { Node, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import NodeRenderer from './NodeRenderer';
 import { useTheme } from './ThemeProvider';
@@ -35,7 +35,19 @@ const styleFields = [
   { label: 'Padding', key: 'padding', placeholder: '12px 16px' }
 ];
 
-export default function EditorLayout() {
+interface EditorLayoutProps {
+  projects: ProjectSummary[];
+  activeProjectId: string | null;
+  onSelectProject: (projectId: string) => void;
+  isLoadingProjects?: boolean;
+}
+
+export default function EditorLayout({
+  projects,
+  activeProjectId,
+  onSelectProject,
+  isLoadingProjects = false
+}: EditorLayoutProps) {
   const nodes = useEditorStore((state) => state.nodes);
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
@@ -72,6 +84,43 @@ export default function EditorLayout() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,2fr)_minmax(240px,0.9fr)]">
         <aside className="flex h-full flex-col gap-4 rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4">
+          <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
+                Projects
+              </h3>
+              <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
+                {projects.length}
+              </span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {isLoadingProjects ? (
+                <p className="text-xs text-slate-400">Loading projects...</p>
+              ) : projects.length === 0 ? (
+                <p className="text-xs text-slate-400">No projects yet.</p>
+              ) : (
+                projects.map((project) => (
+                  <button
+                    key={project.id}
+                    type="button"
+                    onClick={() => onSelectProject(project.id)}
+                    className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-xs transition ${
+                      project.id === activeProjectId
+                        ? 'border-cyan-300/70 bg-cyan-500/10 text-cyan-100'
+                        : 'border-slate-900/80 bg-black/60 text-slate-300 hover:border-cyan-400/60 hover:text-slate-100'
+                    }`}
+                  >
+                    <span className="truncate">{project.name}</span>
+                    <span className="text-[0.6rem] text-slate-500">
+                      {project.updatedAt
+                        ? new Date(project.updatedAt).toLocaleDateString()
+                        : '—'}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-transparent bg-neon-gradient bg-clip-text">
               Blocks

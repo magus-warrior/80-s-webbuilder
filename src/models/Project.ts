@@ -9,3 +9,11 @@ export interface Project {
   pages: Page[];
   themeTokens: ThemeToken[];
 }
+
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  slug?: string;
+  publicId?: string | null;
+  updatedAt?: string;
+}
