@@ -6,6 +6,10 @@ export interface Project {
   name: string;
   description: string;
   updatedAt: string;
+  slug?: string | null;
+  publicSlug?: string | null;
+  isPublished?: boolean;
+  publishedAt?: string | null;
   pages: Page[];
   themeTokens: ThemeToken[];
 }
@@ -15,5 +19,8 @@ export interface ProjectSummary {
   name: string;
   slug?: string;
   publicId?: string | null;
+  publicSlug?: string | null;
+  isPublished?: boolean;
+  publishedAt?: string | null;
   updatedAt?: string;
 }
