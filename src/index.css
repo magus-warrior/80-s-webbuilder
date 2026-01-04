@@ -19,9 +19,14 @@
   );
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, system-ui, sans-serif;
+  overflow-y: scroll;
 }
 
 * {
