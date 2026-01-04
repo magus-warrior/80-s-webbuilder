@@ -32,6 +32,7 @@ export default function App() {
   const previewNodes = editorNodes.length > 0 ? editorNodes : previewPage?.nodes ?? [];
   const saveTimeout = useRef<number | null>(null);
   const latestProject = useRef<Project | null>(null);
+  const saveRequestId = useRef(0);
   const projectId = 1;
 
   const buildUpdatedProject = (base: Project, nodes: Node[], tokens: ThemeToken[]): Project => ({
@@ -56,6 +57,7 @@ export default function App() {
   };
 
   const persistProject = async (nextProject: Project) => {
+    const requestId = ++saveRequestId.current;
     setIsSaving(true);
     setProjectError(null);
     try {
@@ -68,7 +70,11 @@ export default function App() {
         throw new Error(`Save failed: ${response.status}`);
       }
       const savedProject = (await response.json()) as Project;
-      setProject(savedProject);
+      const matchesLatest = requestId === saveRequestId.current;
+      const matchesUpdatedAt = savedProject.updatedAt === latestProject.current?.updatedAt;
+      if (matchesLatest || matchesUpdatedAt) {
+        setProject(savedProject);
+      }
     } catch (error) {
       setProjectError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
