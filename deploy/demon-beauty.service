@@ -1,0 +1,13 @@
+[Unit]
+Description=Demon Beauty Web Builder
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/workspace/80-s-webbuilder
+ExecStart=/workspace/80-s-webbuilder/start.sh
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
