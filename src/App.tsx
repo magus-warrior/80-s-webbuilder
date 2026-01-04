@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { Project } from './models';
+import EditorLayout from './components/editor/EditorLayout';
 
 const features = [
   {
@@ -66,6 +67,8 @@ export default function App() {
             </button>
           </div>
         </header>
+
+        <EditorLayout />
 
         <main className="grid gap-6 md:grid-cols-3">
           {features.map((feature) => (
