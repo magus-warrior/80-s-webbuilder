@@ -153,17 +153,17 @@ export default function App() {
 
   return (
     <ThemeProvider tokens={themeTokens} onTokensChange={setThemeTokens}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950 text-slate-100">
+      <div className="min-h-screen bg-gradient-to-br from-black via-slate-950 to-slate-900 text-slate-100">
         <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-16 px-6 py-12">
-          <header className="flex flex-col gap-6 rounded-3xl border border-violet-500/30 bg-slate-900/70 p-10 shadow-xl shadow-violet-500/10">
+          <header className="flex flex-col gap-6 rounded-3xl border-neon bg-slate-950/80 p-10 shadow-xl neon-glow-soft">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-violet-300">Studio Suite</p>
+                <p className="text-sm uppercase tracking-[0.3em] text-cyan-200">Studio Suite</p>
                 <h1 className="mt-4 text-4xl font-semibold text-white sm:text-5xl">
                   Studio Site Builder
                 </h1>
               </div>
-              <span className="rounded-full border border-violet-400/40 bg-violet-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-violet-200">
+              <span className="rounded-full border-neon px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-100 neon-glow-soft">
                 Template Ready
               </span>
             </div>
@@ -172,10 +172,10 @@ export default function App() {
               and refined accents are all Tailwind-powered.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="rounded-full bg-violet-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-500/40 transition hover:translate-y-0.5 hover:bg-violet-400">
+              <button className="rounded-full bg-neon-gradient px-6 py-3 text-sm font-semibold text-slate-950 shadow-lg neon-glow transition hover:translate-y-0.5 hover:brightness-110">
                 Open Studio
               </button>
-              <button className="rounded-full border border-slate-500 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-violet-400 hover:text-white">
+              <button className="rounded-full border-neon-soft px-6 py-3 text-sm font-semibold text-slate-100 transition hover:brightness-110">
                 Explore Templates
               </button>
             </div>
@@ -187,7 +187,7 @@ export default function App() {
             {features.map((feature) => (
               <article
                 key={feature.title}
-                className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-lg shadow-slate-900/50"
+                className="rounded-2xl border border-slate-900/80 bg-slate-950/70 p-6 shadow-lg shadow-black/40"
               >
                 <h2 className="text-lg font-semibold text-white">{feature.title}</h2>
                 <p className="mt-3 text-sm text-slate-300">{feature.description}</p>
@@ -195,10 +195,10 @@ export default function App() {
             ))}
           </main>
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-lg shadow-slate-900/60">
+          <section className="rounded-2xl border-neon-soft bg-slate-950/70 p-8 shadow-lg shadow-black/60">
             <div className="flex flex-wrap items-start justify-between gap-6">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-violet-300">Local JSON</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">Local JSON</p>
                 <h2 className="mt-3 text-2xl font-semibold text-white">
                   {project ? project.name : 'Loading project...'}
                 </h2>
@@ -213,7 +213,7 @@ export default function App() {
                   {isSaving ? 'Saving changes…' : 'All changes saved'}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/70 px-6 py-4">
+              <div className="rounded-2xl border border-slate-900/80 bg-black/70 px-6 py-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Last updated</p>
                 <p className="mt-2 text-sm text-slate-200">
                   {project ? new Date(project.updatedAt).toLocaleString() : '—'}
@@ -223,24 +223,24 @@ export default function App() {
             {project ? (
               <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-violet-200">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-transparent bg-neon-gradient bg-clip-text">
                     Pages & Nodes
                   </h3>
                   <div className="space-y-4">
                     {project.pages.map((page) => (
-                      <div key={page.id} className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                      <div key={page.id} className="rounded-xl border border-slate-900/80 bg-black/60 p-4">
                         <div className="flex items-center justify-between gap-4">
                           <div>
                             <p className="text-sm font-semibold text-white">{page.title}</p>
                             <p className="text-xs text-slate-400">{page.path}</p>
                           </div>
-                          <span className="rounded-full border border-violet-400/40 bg-violet-500/10 px-3 py-1 text-xs text-violet-200">
+                          <span className="rounded-full border-neon px-3 py-1 text-xs text-slate-100 neon-glow-soft">
                             {page.nodes.length} nodes
                           </span>
                         </div>
                         <ul className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-2">
                           {page.nodes.map((node) => (
-                            <li key={node.id} className="rounded-lg border border-slate-800 bg-slate-900/70 p-2">
+                            <li key={node.id} className="rounded-lg border border-slate-900/80 bg-slate-950/60 p-2">
                               <p className="font-semibold text-slate-100">{node.name}</p>
                               <p className="text-[0.7rem] uppercase tracking-[0.2em] text-slate-400">
                                 {node.type}
@@ -264,7 +264,7 @@ export default function App() {
                           {previewPage ? `${previewPage.title} nodes` : 'No page selected'}
                         </p>
                       </div>
-                      <span className="rounded-full border border-slate-700 px-3 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-slate-400">
+                      <span className="rounded-full border border-slate-700/80 bg-black/60 px-3 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-slate-400">
                         Renderer
                       </span>
                     </div>
@@ -276,20 +276,20 @@ export default function App() {
                   </div>
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-violet-200">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-transparent bg-neon-gradient bg-clip-text">
                     Theme Tokens
                   </h3>
                   <div className="space-y-3">
                     {themeTokens.map((token) => (
                       <div
                         key={token.name}
-                        className="flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3"
+                        className="flex items-center justify-between gap-4 rounded-xl border border-slate-900/80 bg-black/60 px-4 py-3"
                       >
                         <div>
                           <p className="text-sm font-semibold text-white">{token.name}</p>
                           <p className="text-xs text-slate-400">{token.description}</p>
                         </div>
-                        <span className="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-xs text-slate-200">
+                        <span className="rounded-full border-neon-soft bg-black/60 px-3 py-1 text-xs text-slate-100">
                           {token.value}
                         </span>
                       </div>
@@ -300,7 +300,7 @@ export default function App() {
             ) : null}
           </section>
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-8">
+          <section className="rounded-2xl border border-slate-900/80 bg-black/60 p-8">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div>
                 <h3 className="text-xl font-semibold text-white">Ready to publish?</h3>
@@ -309,8 +309,8 @@ export default function App() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="h-3 w-3 rounded-full bg-violet-400 shadow shadow-violet-400/60" />
-                <span className="text-xs uppercase tracking-[0.2em] text-violet-200">Live Styles</span>
+                <span className="h-3 w-3 rounded-full bg-neon-gradient shadow-lg neon-glow-soft" />
+                <span className="text-xs uppercase tracking-[0.2em] text-slate-200">Live Styles</span>
               </div>
             </div>
           </section>

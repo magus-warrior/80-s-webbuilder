@@ -100,7 +100,7 @@ const renderButtonNode = (node: Node) => (
   <button
     type="button"
     style={resolveNodeStyles(node)}
-    className="rounded-full bg-fuchsia-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-lg shadow-fuchsia-500/40 transition hover:bg-fuchsia-400"
+    className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 shadow-lg neon-glow-soft transition hover:brightness-110"
   >
     {node.props?.label ?? node.name}
   </button>
@@ -133,7 +133,7 @@ const renderImageNode = (node: Node) => {
 };
 
 const renderContainerNode = (node: Node) => (
-  <div style={resolveNodeStyles(node)} className="rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4">
+  <div style={resolveNodeStyles(node)} className="rounded-2xl border-neon-soft bg-black/40 p-4">
     {renderChildren(node)}
   </div>
 );
@@ -243,9 +243,7 @@ export default function NodeRenderer({ node }: NodeRendererProps) {
         ref={wrapperRef}
         style={positionStyle}
         className={`cursor-pointer rounded-2xl transition ${
-          isSelected
-            ? 'ring-2 ring-fuchsia-400 ring-offset-2 ring-offset-slate-950'
-            : 'ring-2 ring-transparent ring-offset-2 ring-offset-transparent hover:ring-fuchsia-400/40 hover:ring-offset-slate-950'
+          isSelected ? 'neon-ring' : 'neon-ring-hover'
         }`}
       >
         {renderer(node)}
@@ -257,10 +255,8 @@ export default function NodeRenderer({ node }: NodeRendererProps) {
     <div
       onClick={handleClick}
       ref={wrapperRef}
-      className={`cursor-pointer rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 transition ${
-        isSelected
-          ? 'ring-2 ring-fuchsia-400 ring-offset-2 ring-offset-slate-950'
-          : 'ring-2 ring-transparent ring-offset-2 ring-offset-transparent hover:border-fuchsia-400/60 hover:ring-fuchsia-400/40 hover:ring-offset-slate-950'
+      className={`cursor-pointer rounded-2xl border border-slate-900/80 bg-black/40 p-4 transition ${
+        isSelected ? 'neon-ring' : 'neon-ring-hover'
       }`}
       style={{ ...resolveNodeStyles(node), ...positionStyle }}
     >
