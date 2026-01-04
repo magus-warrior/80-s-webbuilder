@@ -25,6 +25,29 @@ require_cmd python
 
 cd "$ROOT_DIR"
 
+if ! command -v psql >/dev/null 2>&1; then
+  if command -v apt-get >/dev/null 2>&1; then
+    echo "Installing PostgreSQL (apt-get)..."
+    sudo apt-get update
+    sudo apt-get install -y postgresql postgresql-contrib
+  else
+    echo "Error: PostgreSQL is required but no supported package manager was found." >&2
+    echo "Install PostgreSQL and rerun this script." >&2
+    exit 1
+  fi
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+  sudo systemctl enable --now postgresql
+fi
+
+echo "Configuring PostgreSQL database..."
+sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='postgres'" | grep -q 1 \
+  || sudo -u postgres psql -c "CREATE USER postgres WITH SUPERUSER;"
+sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='fastapi_app'" | grep -q 1 \
+  || sudo -u postgres createdb -O postgres fastapi_app
+
 echo "Installing backend dependencies (requirements.txt)..."
 python -m pip install -r requirements.txt
 
