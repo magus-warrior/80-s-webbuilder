@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import type { Project } from './models';
 import EditorLayout from './components/editor/EditorLayout';
+import NodeRenderer from './components/editor/NodeRenderer';
 
 const features = [
   {
@@ -21,6 +22,7 @@ const features = [
 export default function App() {
   const [project, setProject] = useState<Project | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const previewPage = project?.pages[0];
 
   useEffect(() => {
     const loadProject = async () => {
@@ -139,6 +141,24 @@ export default function App() {
                       </ul>
                     </div>
                   ))}
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-white">Rendered Preview</p>
+                      <p className="text-xs text-slate-400">
+                        {previewPage ? `${previewPage.title} nodes` : 'No page selected'}
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-slate-700 px-3 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-slate-400">
+                      Renderer
+                    </span>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {previewPage?.nodes.map((node) => (
+                      <NodeRenderer key={node.id} node={node} />
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="space-y-4">
