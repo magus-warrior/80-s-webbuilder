@@ -25,7 +25,7 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.get("/")
+@app.get("/", response_model=None)
 def root() -> dict | FileResponse:
     if INDEX_FILE.exists():
         return FileResponse(INDEX_FILE)
