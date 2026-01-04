@@ -27,13 +27,37 @@ export default function AuthScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
+      const contentType = response.headers.get('content-type') ?? '';
+      const isJson = contentType.includes('application/json');
 
       if (!response.ok) {
-        const payload = (await response.json()) as { detail?: string };
-        throw new Error(payload.detail ?? `Auth failed: ${response.status}`);
+        let message = `Auth failed: ${response.status}`;
+        if (isJson) {
+          try {
+            const payload = (await response.json()) as { detail?: string };
+            message = payload.detail ?? message;
+          } catch (parseError) {
+            message = `Auth failed with unreadable error: ${response.status}`;
+          }
+        } else {
+          const text = await response.text();
+          if (text.trim()) {
+            message = text;
+          }
+        }
+        throw new Error(message);
       }
 
-      const data = (await response.json()) as AuthResponse;
+      if (!isJson) {
+        throw new Error('Received non-JSON response from server');
+      }
+
+      let data: AuthResponse;
+      try {
+        data = (await response.json()) as AuthResponse;
+      } catch (parseError) {
+        throw new Error('Received malformed JSON from server');
+      }
       setAuth(data.access_token, email);
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : 'Authentication failed');
