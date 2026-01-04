@@ -1,6 +1,7 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 
 import type { Node } from '../../models';
+import { useEditorStore } from '../../store/editorStore';
 
 type NodeRendererProps = {
   node: Node;
@@ -93,6 +94,16 @@ const renderTextNode = (node: Node) => (
   </p>
 );
 
+const renderButtonNode = (node: Node) => (
+  <button
+    type="button"
+    style={resolveNodeStyles(node)}
+    className="rounded-full bg-fuchsia-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-lg shadow-fuchsia-500/40 transition hover:bg-fuchsia-400"
+  >
+    {node.props?.label ?? node.name}
+  </button>
+);
+
 const renderImageNode = (node: Node) => {
   const src = node.props?.src;
   const alt = node.props?.alt ?? node.name;
@@ -127,19 +138,46 @@ const renderContainerNode = (node: Node) => (
 
 const nodeRenderers: Partial<Record<Node['type'], (node: Node) => JSX.Element>> = {
   text: renderTextNode,
+  button: renderButtonNode,
   image: renderImageNode,
   container: renderContainerNode
 };
 
 export default function NodeRenderer({ node }: NodeRendererProps) {
+  const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
+  const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const renderer = nodeRenderers[node.type];
+  const isSelected = selectedNodeId === node.id;
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    setSelectedNodeId(node.id);
+  };
 
   if (renderer) {
-    return renderer(node);
+    return (
+      <div
+        onClick={handleClick}
+        className={`cursor-pointer rounded-2xl transition ${
+          isSelected
+            ? 'ring-2 ring-fuchsia-400 ring-offset-2 ring-offset-slate-950'
+            : 'ring-2 ring-transparent ring-offset-2 ring-offset-transparent hover:ring-fuchsia-400/40 hover:ring-offset-slate-950'
+        }`}
+      >
+        {renderer(node)}
+      </div>
+    );
   }
 
   return (
-    <div className="rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4" style={resolveNodeStyles(node)}>
+    <div
+      onClick={handleClick}
+      className={`cursor-pointer rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 transition ${
+        isSelected
+          ? 'ring-2 ring-fuchsia-400 ring-offset-2 ring-offset-slate-950'
+          : 'ring-2 ring-transparent ring-offset-2 ring-offset-transparent hover:border-fuchsia-400/60 hover:ring-fuchsia-400/40 hover:ring-offset-slate-950'
+      }`}
+      style={resolveNodeStyles(node)}
+    >
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{node.type}</div>
       <p className="mt-2 text-sm text-slate-200">{node.name}</p>
       {renderChildren(node)}
