@@ -64,11 +64,13 @@ if [[ "${frontend_choice,,}" == "y" ]]; then
   npm install
 fi
 
-mode_choice=$(prompt_choice "Install as systemd service or manual run? [systemd/manual] (manual): " "manual")
-if [[ "${mode_choice,,}" == "systemd" ]]; then
-  require_cmd systemctl
+mode_choice=$(prompt_choice "Install as systemd service or manual run? [systemd/manual] (systemd): " "systemd")
+if [[ "${mode_choice,,}" == "systemd" ]] && command -v systemctl >/dev/null 2>&1; then
   echo "Installing systemd service from deploy/demon-beauty.service..."
-  sudo cp "$ROOT_DIR/deploy/demon-beauty.service" /etc/systemd/system/demon-beauty.service
+  service_tmp="$(mktemp)"
+  sed "s|@ROOT_DIR@|$ROOT_DIR|g" "$ROOT_DIR/deploy/demon-beauty.service" > "$service_tmp"
+  sudo cp "$service_tmp" /etc/systemd/system/demon-beauty.service
+  rm -f "$service_tmp"
   sudo systemctl daemon-reload
   sudo systemctl enable --now demon-beauty.service
 
