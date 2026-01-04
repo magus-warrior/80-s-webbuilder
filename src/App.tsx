@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import type { Node, Project, ThemeToken } from './models';
+import type { Node, Project, ProjectSummary, ThemeToken } from './models';
 import AuthScreen from './components/auth/AuthScreen';
 import EditorLayout from './components/editor/EditorLayout';
 import NodeRenderer from './components/editor/NodeRenderer';
@@ -26,6 +26,10 @@ const features = [
 export default function App() {
   const [project, setProject] = useState<Project | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
+  const [projectList, setProjectList] = useState<ProjectSummary[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [isLoadingProject, setIsLoadingProject] = useState(false);
   const [themeTokens, setThemeTokens] = useState<ThemeToken[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const authToken = useAuthStore((state) => state.token);
@@ -39,7 +43,18 @@ export default function App() {
   const latestProject = useRef<Project | null>(null);
   const saveRequestId = useRef(0);
   const lastLoadedProjectId = useRef<string | null>(null);
-  const projectId = 1;
+
+  const parseProjectIdFromPath = () => {
+    const match = window.location.pathname.match(/projects\/([^/]+)/);
+    return match?.[1] ?? null;
+  };
+
+  const updateProjectRoute = (projectId: string) => {
+    const nextPath = `/projects/${projectId}`;
+    if (window.location.pathname !== nextPath) {
+      window.history.replaceState(null, '', nextPath);
+    }
+  };
 
   const buildUpdatedProject = (base: Project, nodes: Node[], tokens: ThemeToken[]): Project => ({
     ...base,
@@ -63,11 +78,14 @@ export default function App() {
   };
 
   const persistProject = async (nextProject: Project) => {
+    if (!activeProjectId) {
+      return;
+    }
     const requestId = ++saveRequestId.current;
     setIsSaving(true);
     setProjectError(null);
     try {
-      const response = await fetch(`/projects/${projectId}`, {
+      const response = await fetch(`/projects/${activeProjectId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -97,39 +115,109 @@ export default function App() {
   };
 
   useEffect(() => {
-    const loadProject = async () => {
+    if (!authToken) {
+      setProject(null);
+      setProjectList([]);
+      setActiveProjectId(null);
+      setIsLoadingProjects(false);
+      return;
+    }
+
+    const loadProjects = async () => {
+      setIsLoadingProjects(true);
+      setProjectError(null);
       try {
-      const response = await fetch(`/projects/${projectId}`, {
-        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
-      });
-      if (response.ok) {
-        const data = (await response.json()) as Project;
-        setProject(data);
-        return;
+        const response = await fetch('/projects', {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (!response.ok) {
+          throw new Error(`Project list failed: ${response.status}`);
         }
-        if (response.status !== 404) {
-          throw new Error(`Request failed: ${response.status}`);
+        const projects = (await response.json()) as ProjectSummary[];
+        if (projects.length === 0) {
+          const seedResponse = await fetch('/sample-project.json');
+          if (!seedResponse.ok) {
+            throw new Error(`Seed request failed: ${seedResponse.status}`);
+          }
+          const seedData = (await seedResponse.json()) as Project;
+          const createdResponse = await fetch('/projects', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${authToken}`
+            },
+            body: JSON.stringify(seedData)
+          });
+          if (!createdResponse.ok) {
+            throw new Error(`Project create failed: ${createdResponse.status}`);
+          }
+          const createdProject = (await createdResponse.json()) as Project;
+          setProject(createdProject);
+          setProjectList([
+            {
+              id: createdProject.id,
+              name: createdProject.name,
+              updatedAt: createdProject.updatedAt
+            }
+          ]);
+          setActiveProjectId(createdProject.id);
+          updateProjectRoute(createdProject.id);
+          return;
         }
-        const seedResponse = await fetch('/sample-project.json');
-        if (!seedResponse.ok) {
-          throw new Error(`Seed request failed: ${seedResponse.status}`);
+        setProjectList(projects);
+        const routeProjectId = parseProjectIdFromPath();
+        const initialProjectId =
+          routeProjectId && projects.some((item) => item.id === routeProjectId)
+            ? routeProjectId
+            : projects[0]?.id ?? null;
+        if (initialProjectId) {
+          setActiveProjectId(initialProjectId);
+          updateProjectRoute(initialProjectId);
         }
-        const seedData = (await seedResponse.json()) as Project;
-        setProject(seedData);
-        await persistProject(seedData);
       } catch (error) {
         setProjectError(error instanceof Error ? error.message : 'Unknown error');
+      } finally {
+        setIsLoadingProjects(false);
+      }
+    };
+
+    void loadProjects();
+  }, [authToken]);
+
+  useEffect(() => {
+    if (!authToken || !activeProjectId) {
+      return;
+    }
+    const loadProject = async () => {
+      setIsLoadingProject(true);
+      setProjectError(null);
+      try {
+        const response = await fetch(`/projects/${activeProjectId}`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (!response.ok) {
+          throw new Error(`Project request failed: ${response.status}`);
+        }
+        const data = (await response.json()) as Project;
+        setProject(data);
+      } catch (error) {
+        setProjectError(error instanceof Error ? error.message : 'Unknown error');
+      } finally {
+        setIsLoadingProject(false);
       }
     };
 
     void loadProject();
-  }, [authToken]);
+  }, [activeProjectId, authToken]);
 
   const handleLogout = async () => {
     try {
       await fetch('/auth/logout', { method: 'POST' });
     } finally {
       clearAuth();
+      setProject(null);
+      setProjectList([]);
+      setActiveProjectId(null);
     }
   };
 
@@ -231,7 +319,15 @@ export default function App() {
             </div>
           </header>
 
-          <EditorLayout />
+          <EditorLayout
+            projects={projectList}
+            activeProjectId={activeProjectId}
+            onSelectProject={(projectId) => {
+              setActiveProjectId(projectId);
+              updateProjectRoute(projectId);
+            }}
+            isLoadingProjects={isLoadingProjects}
+          />
 
           <main className="grid gap-6 md:grid-cols-3">
             {features.map((feature) => (
@@ -250,7 +346,7 @@ export default function App() {
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">Local JSON</p>
                 <h2 className="mt-3 text-2xl font-semibold text-white">
-                  {project ? project.name : 'Loading project...'}
+                  {project ? project.name : isLoadingProject ? 'Loading project...' : 'No project loaded'}
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm text-slate-300">
                   {project?.description ??
