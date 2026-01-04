@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import type { Project, ThemeToken } from './models';
+import type { Node, Project, ThemeToken } from './models';
 import EditorLayout from './components/editor/EditorLayout';
 import NodeRenderer from './components/editor/NodeRenderer';
 import { ThemeProvider } from './components/editor/ThemeProvider';
@@ -25,20 +25,76 @@ export default function App() {
   const [project, setProject] = useState<Project | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [themeTokens, setThemeTokens] = useState<ThemeToken[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   const setNodes = useEditorStore((state) => state.setNodes);
   const editorNodes = useEditorStore((state) => state.nodes);
   const previewPage = project?.pages[0];
   const previewNodes = editorNodes.length > 0 ? editorNodes : previewPage?.nodes ?? [];
+  const saveTimeout = useRef<number | null>(null);
+  const latestProject = useRef<Project | null>(null);
+  const projectId = 1;
+
+  const buildUpdatedProject = (base: Project, nodes: Node[], tokens: ThemeToken[]): Project => ({
+    ...base,
+    updatedAt: new Date().toISOString(),
+    themeTokens: tokens,
+    pages: base.pages.map((page, index) =>
+      index === 0
+        ? {
+            ...page,
+            nodes
+          }
+        : page
+    )
+  });
+
+  const hasProjectChanges = (base: Project, nodes: Node[], tokens: ThemeToken[]) => {
+    const baseNodes = base.pages[0]?.nodes ?? [];
+    const nodesMatch = JSON.stringify(baseNodes) === JSON.stringify(nodes);
+    const tokensMatch = JSON.stringify(base.themeTokens ?? []) === JSON.stringify(tokens);
+    return !(nodesMatch && tokensMatch);
+  };
+
+  const persistProject = async (nextProject: Project) => {
+    setIsSaving(true);
+    setProjectError(null);
+    try {
+      const response = await fetch(`/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextProject)
+      });
+      if (!response.ok) {
+        throw new Error(`Save failed: ${response.status}`);
+      }
+      const savedProject = (await response.json()) as Project;
+      setProject(savedProject);
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
     const loadProject = async () => {
       try {
-        const response = await fetch('/sample-project.json');
-        if (!response.ok) {
+        const response = await fetch(`/projects/${projectId}`);
+        if (response.ok) {
+          const data = (await response.json()) as Project;
+          setProject(data);
+          return;
+        }
+        if (response.status !== 404) {
           throw new Error(`Request failed: ${response.status}`);
         }
-        const data = (await response.json()) as Project;
-        setProject(data);
+        const seedResponse = await fetch('/sample-project.json');
+        if (!seedResponse.ok) {
+          throw new Error(`Seed request failed: ${seedResponse.status}`);
+        }
+        const seedData = (await seedResponse.json()) as Project;
+        setProject(seedData);
+        await persistProject(seedData);
       } catch (error) {
         setProjectError(error instanceof Error ? error.message : 'Unknown error');
       }
@@ -49,15 +105,51 @@ export default function App() {
 
   useEffect(() => {
     if (previewPage?.nodes) {
-      setNodes(previewPage.nodes);
+      const currentNodes = useEditorStore.getState().nodes;
+      if (JSON.stringify(currentNodes) !== JSON.stringify(previewPage.nodes)) {
+        setNodes(previewPage.nodes);
+      }
     }
   }, [previewPage, setNodes]);
 
   useEffect(() => {
     if (project?.themeTokens) {
-      setThemeTokens(project.themeTokens);
+      if (JSON.stringify(themeTokens) !== JSON.stringify(project.themeTokens)) {
+        setThemeTokens(project.themeTokens);
+      }
     }
+  }, [project, themeTokens]);
+
+  useEffect(() => {
+    latestProject.current = project;
   }, [project]);
+
+  useEffect(() => {
+    const baseProject = latestProject.current;
+    if (!baseProject) {
+      return;
+    }
+
+    if (!hasProjectChanges(baseProject, editorNodes, themeTokens)) {
+      return;
+    }
+
+    const nextProject = buildUpdatedProject(baseProject, editorNodes, themeTokens);
+    setProject(nextProject);
+
+    if (saveTimeout.current) {
+      window.clearTimeout(saveTimeout.current);
+    }
+    saveTimeout.current = window.setTimeout(() => {
+      void persistProject(nextProject);
+    }, 600);
+
+    return () => {
+      if (saveTimeout.current) {
+        window.clearTimeout(saveTimeout.current);
+      }
+    };
+  }, [editorNodes, themeTokens]);
 
   return (
     <ThemeProvider tokens={themeTokens} onTokensChange={setThemeTokens}>
@@ -117,6 +209,9 @@ export default function App() {
                 {projectError ? (
                   <p className="mt-3 text-sm text-rose-300">Error: {projectError}</p>
                 ) : null}
+                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-400">
+                  {isSaving ? 'Saving changes…' : 'All changes saved'}
+                </p>
               </div>
               <div className="rounded-2xl border border-slate-800 bg-slate-950/70 px-6 py-4">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Last updated</p>
