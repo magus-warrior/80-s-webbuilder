@@ -1,2 +1,2 @@
-# 80-s-webbuilder
-A Rainbow Neon inspired web builder
+# demon.beauty
+demon.beauty is a dark-glam web builder for ritual-ready landing pages.

@@ -8,15 +8,15 @@ import { useEditorStore } from './store/editorStore';
 
 const features = [
   {
-    title: 'Retro-ready layouts',
-    description: 'Grid-based sections with neon accents and high-contrast surfaces.'
+    title: 'Ritual-ready layouts',
+    description: 'Grid-based sections with obsidian gradients and luminous accents.'
   },
   {
-    title: 'Component building blocks',
-    description: 'Reusable cards, buttons, and status badges for quick assembly.'
+    title: 'Modular relics',
+    description: 'Reusable cards, buttons, and status badges for quick conjuring.'
   },
   {
-    title: 'Instant theming',
+    title: 'Instant aura shifts',
     description: 'Swap palettes with Tailwind utility classes and CSS variables.'
   }
 ];
@@ -158,25 +158,25 @@ export default function App() {
           <header className="flex flex-col gap-6 rounded-3xl border border-fuchsia-500/30 bg-slate-900/70 p-10 shadow-xl shadow-fuchsia-500/10">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-fuchsia-300">Tailwind Online</p>
+                <p className="text-sm uppercase tracking-[0.3em] text-fuchsia-300">demon.beauty</p>
                 <h1 className="mt-4 text-4xl font-semibold text-white sm:text-5xl">
-                  80&apos;s Webbuilder
+                  demon.beauty
                 </h1>
               </div>
               <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-fuchsia-200">
-                Tailwind Ready
+                Ritual Ready
               </span>
             </div>
             <p className="max-w-2xl text-lg text-slate-200">
-              This layout is built with Tailwind CSS utility classes to confirm styles are applying on the
-              main page. The neon gradient, glassy card, and glowing buttons all use Tailwind styling.
+              This layout confirms demon.beauty styling is live. The obsidian gradient, glassy card, and
+              glowing buttons are all Tailwind-powered.
             </p>
             <div className="flex flex-wrap gap-4">
               <button className="rounded-full bg-fuchsia-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/40 transition hover:translate-y-0.5 hover:bg-fuchsia-400">
-                Launch Builder
+                Enter Studio
               </button>
               <button className="rounded-full border border-slate-500 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-fuchsia-400 hover:text-white">
-                View Templates
+                Browse Rituals
               </button>
             </div>
           </header>
@@ -303,9 +303,9 @@ export default function App() {
           <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-8">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div>
-                <h3 className="text-xl font-semibold text-white">Ready to build?</h3>
+                <h3 className="text-xl font-semibold text-white">Ready to summon?</h3>
                 <p className="mt-2 text-sm text-slate-300">
-                  Tailwind styles are now wired up and ready for your next layout.
+                  Tailwind styles are now wired up for your next spellbound layout.
                 </p>
               </div>
               <div className="flex items-center gap-3">
