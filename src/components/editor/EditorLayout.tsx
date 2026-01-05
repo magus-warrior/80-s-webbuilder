@@ -32,12 +32,12 @@ const findNodeById = (nodes: Node[], nodeId: string | null): Node | null => {
 
 const styleFields = [
   { label: 'Text color', key: 'color', placeholder: '#f8fafc' },
-  { label: 'Background', key: 'backgroundColor', placeholder: '#0f172a' },
+  { label: 'Background', key: 'background', placeholder: '#0f172a' },
   { label: 'Font size', key: 'fontSize', placeholder: '16px' },
   { label: 'Padding', key: 'padding', placeholder: '12px 16px' }
 ];
 
-const colorFieldKeys = new Set(['color', 'backgroundColor']);
+const colorFieldKeys = new Set(['color', 'background']);
 
 interface EditorLayoutProps {
   projects: ProjectSummary[];
