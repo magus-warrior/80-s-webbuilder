@@ -122,7 +122,7 @@ const renderChildren = (node: Node, interactive: boolean) =>
   )) ?? null;
 
 const renderTextNode = (node: Node, _interactive: boolean, tokenMap: Record<string, string>) => (
-  <p style={resolveNodeStyles(node, tokenMap)} className="text-sm text-slate-100">
+  <p style={resolveNodeStyles(node, tokenMap)} className="text-sm text-inherit">
     {node.props?.content ?? node.name}
   </p>
 );
@@ -131,7 +131,7 @@ const renderButtonNode = (node: Node, _interactive: boolean, tokenMap: Record<st
   <button
     type="button"
     style={resolveNodeStyles(node, tokenMap)}
-    className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 shadow-lg neon-glow-soft transition hover:brightness-110"
+    className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-inherit shadow-lg neon-glow-soft transition hover:brightness-110"
   >
     {node.props?.label ?? node.name}
   </button>
@@ -167,14 +167,18 @@ const renderContainerNode = (
   node: Node,
   interactive: boolean,
   tokenMap: Record<string, string>
-) => (
-  <div
-    style={resolveNodeStyles(node, tokenMap)}
-    className="rounded-2xl border-neon-soft bg-black/40 p-4"
-  >
-    {renderChildren(node, interactive)}
-  </div>
-);
+) => {
+  const style = resolveNodeStyles(node, tokenMap);
+  const hasBackground = Boolean(style.background || style.backgroundColor);
+  return (
+    <div
+      style={style}
+      className={`rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`}
+    >
+      {renderChildren(node, interactive)}
+    </div>
+  );
+};
 
 const nodeRenderers: Partial<
   Record<Node['type'], (node: Node, interactive: boolean, tokenMap: Record<string, string>) => JSX.Element>
