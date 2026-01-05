@@ -34,10 +34,92 @@ const styleFields = [
   { label: 'Text color', key: 'color', placeholder: '#f8fafc' },
   { label: 'Background', key: 'background', placeholder: '#0f172a' },
   { label: 'Font size', key: 'fontSize', placeholder: '16px' },
-  { label: 'Padding', key: 'padding', placeholder: '12px 16px' }
+  { label: 'Padding', key: 'padding', placeholder: '12px 16px' },
+  { label: 'Margin', key: 'margin', placeholder: '0' },
+  { label: 'Border radius', key: 'borderRadius', placeholder: '12px' },
+  { label: 'Gap', key: 'gap', placeholder: '12px' },
+  { label: 'Width', key: 'width', placeholder: 'auto' },
+  { label: 'Height', key: 'height', placeholder: 'auto' }
 ];
 
 const colorFieldKeys = new Set(['color', 'background']);
+
+const styleSelectFields = [
+  {
+    label: 'Font weight',
+    key: 'fontWeight',
+    options: [
+      { label: 'Default', value: '' },
+      { label: 'Light (300)', value: '300' },
+      { label: 'Regular (400)', value: '400' },
+      { label: 'Medium (500)', value: '500' },
+      { label: 'Semibold (600)', value: '600' },
+      { label: 'Bold (700)', value: '700' }
+    ]
+  },
+  {
+    label: 'Text align',
+    key: 'textAlign',
+    options: [
+      { label: 'Default', value: '' },
+      { label: 'Left', value: 'left' },
+      { label: 'Center', value: 'center' },
+      { label: 'Right', value: 'right' },
+      { label: 'Justify', value: 'justify' }
+    ]
+  },
+  {
+    label: 'Display',
+    key: 'display',
+    options: [
+      { label: 'Default', value: '' },
+      { label: 'Block', value: 'block' },
+      { label: 'Inline block', value: 'inline-block' },
+      { label: 'Flex', value: 'flex' },
+      { label: 'Grid', value: 'grid' },
+      { label: 'None', value: 'none' }
+    ]
+  },
+  {
+    label: 'Justify content',
+    key: 'justifyContent',
+    options: [
+      { label: 'Default', value: '' },
+      { label: 'Start', value: 'flex-start' },
+      { label: 'Center', value: 'center' },
+      { label: 'End', value: 'flex-end' },
+      { label: 'Space between', value: 'space-between' },
+      { label: 'Space around', value: 'space-around' },
+      { label: 'Space evenly', value: 'space-evenly' }
+    ]
+  },
+  {
+    label: 'Align items',
+    key: 'alignItems',
+    options: [
+      { label: 'Default', value: '' },
+      { label: 'Stretch', value: 'stretch' },
+      { label: 'Start', value: 'flex-start' },
+      { label: 'Center', value: 'center' },
+      { label: 'End', value: 'flex-end' },
+      { label: 'Baseline', value: 'baseline' }
+    ]
+  }
+];
+
+const containerStyleFields = [
+  {
+    label: 'Grid columns',
+    key: 'gridTemplateColumns',
+    placeholder: 'repeat(3, minmax(0, 1fr))'
+  }
+];
+
+const resetStyleKeys = [
+  ...styleFields.map((field) => field.key),
+  ...styleSelectFields.map((field) => field.key),
+  ...containerStyleFields.map((field) => field.key)
+];
 
 interface EditorLayoutProps {
   projects: ProjectSummary[];
@@ -84,7 +166,7 @@ export default function EditorLayout({
     if (!selectedNode) {
       return;
     }
-    const resetPayload = Object.fromEntries(styleFields.map((field) => [field.key, '']));
+    const resetPayload = Object.fromEntries(resetStyleKeys.map((key) => [key, '']));
     updateNodeProps(selectedNode.id, resetPayload);
   };
   const handleAddBlock = (templateName: string) => {
@@ -327,6 +409,47 @@ export default function EditorLayout({
                       )}
                     </div>
                   ))}
+                  {styleSelectFields.map((field) => (
+                    <label key={field.key} className="block">
+                      <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                        {field.label}
+                      </span>
+                      <select
+                        value={selectedNode.props?.[field.key] ?? ''}
+                        onChange={(event) =>
+                          updateNodeProps(selectedNode.id, {
+                            [field.key]: event.target.value
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                      >
+                        {field.options.map((option) => (
+                          <option key={option.value || 'default'} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                  {selectedNode.type === 'container'
+                    ? containerStyleFields.map((field) => (
+                        <label key={field.key} className="block">
+                          <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                            {field.label}
+                          </span>
+                          <input
+                            value={selectedNode.props?.[field.key] ?? ''}
+                            onChange={(event) =>
+                              updateNodeProps(selectedNode.id, {
+                                [field.key]: event.target.value
+                              })
+                            }
+                            placeholder={field.placeholder}
+                            className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                          />
+                        </label>
+                      ))
+                    : null}
                 </div>
               </div>
               {selectedNode.type === 'image' && (
