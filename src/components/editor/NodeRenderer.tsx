@@ -21,7 +21,11 @@ const stylePropHandlers: Record<
     style.background = value;
   },
   backgroundColor: (value, style) => {
-    style.backgroundColor = value;
+    if (value.includes('gradient')) {
+      style.background = value;
+    } else {
+      style.backgroundColor = value;
+    }
   },
   fontSize: (value, style) => {
     style.fontSize = value;
