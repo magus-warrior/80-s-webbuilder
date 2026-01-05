@@ -2,6 +2,7 @@ import { useMemo, type ChangeEvent } from 'react';
 
 import type { Asset, Node, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
+import ColorControl from './ColorControl';
 import NodeRenderer from './NodeRenderer';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
 import { useTheme } from './ThemeProvider';
@@ -35,6 +36,8 @@ const styleFields = [
   { label: 'Font size', key: 'fontSize', placeholder: '16px' },
   { label: 'Padding', key: 'padding', placeholder: '12px 16px' }
 ];
+
+const colorFieldKeys = new Set(['color', 'backgroundColor']);
 
 interface EditorLayoutProps {
   projects: ProjectSummary[];
@@ -294,21 +297,35 @@ export default function EditorLayout({
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Style</p>
                 <div className="mt-3 space-y-3">
                   {styleFields.map((field) => (
-                    <label key={field.key} className="block">
-                      <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                        {field.label}
-                      </span>
-                      <input
-                        value={selectedNode.props?.[field.key] ?? ''}
-                        onChange={(event) =>
-                          updateNodeProps(selectedNode.id, {
-                            [field.key]: event.target.value
-                          })
-                        }
-                        placeholder={field.placeholder}
-                        className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                      />
-                    </label>
+                    <div key={field.key} className="block">
+                      {colorFieldKeys.has(field.key) ? (
+                        <ColorControl
+                          label={field.label}
+                          value={selectedNode.props?.[field.key] ?? ''}
+                          onChange={(nextValue) =>
+                            updateNodeProps(selectedNode.id, {
+                              [field.key]: nextValue
+                            })
+                          }
+                        />
+                      ) : (
+                        <label className="block">
+                          <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                            {field.label}
+                          </span>
+                          <input
+                            value={selectedNode.props?.[field.key] ?? ''}
+                            onChange={(event) =>
+                              updateNodeProps(selectedNode.id, {
+                                [field.key]: event.target.value
+                              })
+                            }
+                            placeholder={field.placeholder}
+                            className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                          />
+                        </label>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -375,22 +392,33 @@ export default function EditorLayout({
                 <div className="mt-3 space-y-3">
                   {tokens.length > 0 ? (
                     tokens.map((token) => (
-                      <label key={token.name} className="block">
-                        <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                          {token.name}
-                        </span>
-                        <input
-                          value={token.value}
-                          onChange={(event) => updateTokenValue(token.name, event.target.value)}
-                          className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                          placeholder={token.description ?? 'Theme token value'}
-                        />
-                        {token.description ? (
-                          <span className="mt-2 block text-[0.65rem] text-slate-500">
-                            {token.description}
-                          </span>
-                        ) : null}
-                      </label>
+                      <div key={token.name} className="block">
+                        {token.category === 'color' ? (
+                          <ColorControl
+                            label={token.name}
+                            value={token.value}
+                            onChange={(nextValue) => updateTokenValue(token.name, nextValue)}
+                            description={token.description}
+                          />
+                        ) : (
+                          <label className="block">
+                            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                              {token.name}
+                            </span>
+                            <input
+                              value={token.value}
+                              onChange={(event) => updateTokenValue(token.name, event.target.value)}
+                              className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                              placeholder={token.description ?? 'Theme token value'}
+                            />
+                            {token.description ? (
+                              <span className="mt-2 block text-[0.65rem] text-slate-500">
+                                {token.description}
+                              </span>
+                            ) : null}
+                          </label>
+                        )}
+                      </div>
                     ))
                   ) : (
                     <p className="text-xs text-slate-500">No theme tokens loaded yet.</p>
