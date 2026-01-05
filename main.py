@@ -242,7 +242,7 @@ def serialize_asset(asset: Asset) -> dict[str, Any]:
     }
 
 
-@app.get("/public/{slug}")
+@app.get("/api/public/{slug}")
 def get_public_project(slug: str, db: Session = Depends(get_db)) -> dict[str, Any]:
     project = (
         db.query(Project)
@@ -252,6 +252,13 @@ def get_public_project(slug: str, db: Session = Depends(get_db)) -> dict[str, An
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return serialize_project(project)
+
+
+@app.get("/public/{path:path}", response_model=None)
+def public_site(path: str) -> FileResponse:
+    if INDEX_FILE.exists():
+        return FileResponse(INDEX_FILE)
+    raise HTTPException(status_code=404, detail="Public site not available")
 
 
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
