@@ -5,7 +5,7 @@ import shutil
 import uuid
 from typing import Any
 
-from fastapi import Body, Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Body, Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -74,8 +74,14 @@ def publish_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     is_published = bool(payload.get("isPublished"))
+    public_slug_input = payload.get("publicSlug")
     if is_published:
         project.is_published = True
+        if public_slug_input:
+            public_slug = normalize_public_slug(public_slug_input)
+            if not is_public_slug_available(public_slug, project, db):
+                raise HTTPException(status_code=400, detail="Public slug already in use")
+            project.public_slug = public_slug
         if not project.public_slug:
             project.public_slug = build_public_slug(project, db)
         if project.published_at is None:
@@ -83,6 +89,8 @@ def publish_project(
     else:
         project.is_published = False
         project.published_at = None
+    if project.public_slug:
+        project.data = {**(project.data or {}), "publicSlug": project.public_slug}
     db.commit()
     db.refresh(project)
     return serialize_project(project)
@@ -191,6 +199,12 @@ def build_slug(name: str) -> str:
     return slug or "project"
 
 
+def normalize_public_slug(value: str) -> str:
+    if not value.strip():
+        raise HTTPException(status_code=400, detail="Public slug is required")
+    return build_slug(value)
+
+
 def build_public_slug(project: Project, db: Session) -> str:
     base_slug = project.slug or build_slug(project.name)
     candidate = base_slug
@@ -203,6 +217,15 @@ def build_public_slug(project: Project, db: Session) -> str:
         suffix += 1
         candidate = f"{base_slug}-{suffix}"
     return candidate
+
+
+def is_public_slug_available(slug: str, project: Project, db: Session) -> bool:
+    existing = (
+        db.query(Project)
+        .filter(Project.public_slug == slug, Project.id != project.id)
+        .first()
+    )
+    return existing is None
 
 
 def serialize_project(project: Project) -> dict[str, Any]:
@@ -239,6 +262,27 @@ def serialize_asset(asset: Asset) -> dict[str, Any]:
         "url": asset.url,
         "filename": asset.filename,
         "createdAt": asset.created_at.isoformat() if asset.created_at else None,
+    }
+
+
+@app.get("/projects/{project_id}/public-slug/validate")
+def validate_public_slug(
+    project_id: int,
+    slug: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    normalized = normalize_public_slug(slug)
+    return {
+        "slug": normalized,
+        "available": is_public_slug_available(normalized, project, db),
     }
 
 

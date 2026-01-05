@@ -33,6 +33,11 @@ export default function App() {
   const [themeTokens, setThemeTokens] = useState<ThemeToken[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [publicSlugDraft, setPublicSlugDraft] = useState('');
+  const [publicSlugStatus, setPublicSlugStatus] = useState<{
+    state: 'idle' | 'checking' | 'available' | 'unavailable' | 'error';
+    message?: string;
+  }>({ state: 'idle' });
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
   const [isUploadingAsset, setIsUploadingAsset] = useState(false);
@@ -147,19 +152,34 @@ export default function App() {
     setIsPublishing(true);
     setProjectError(null);
     try {
+      const payload: Record<string, unknown> = { isPublished: nextPublished };
+      if (publicSlugDraft.trim()) {
+        payload.publicSlug = publicSlugDraft.trim();
+      }
       const response = await fetch(`/projects/${activeProjectId}/publish`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
         },
-        body: JSON.stringify({ isPublished: nextPublished })
+        body: JSON.stringify(payload)
       });
       if (!response.ok) {
-        throw new Error(`Publish update failed: ${response.status}`);
+        let message = `Publish update failed: ${response.status}`;
+        try {
+          const data = (await response.json()) as { detail?: string };
+          if (data.detail) {
+            message = data.detail;
+          }
+        } catch {
+          // ignore parsing errors
+        }
+        throw new Error(message);
       }
       const updatedProject = (await response.json()) as Project;
       setProject(updatedProject);
+      setPublicSlugDraft(updatedProject.publicSlug ?? '');
+      setPublicSlugStatus({ state: 'idle' });
       setProjectList((prev) =>
         prev.map((item) =>
           item.id === updatedProject.id
@@ -297,6 +317,8 @@ export default function App() {
         }
         const data = (await response.json()) as Project;
         setProject(data);
+        setPublicSlugDraft(data.publicSlug ?? '');
+        setPublicSlugStatus({ state: 'idle' });
       } catch (error) {
         setProjectError(error instanceof Error ? error.message : 'Unknown error');
       } finally {
@@ -306,6 +328,52 @@ export default function App() {
 
     void loadProject();
   }, [activeProjectId, authToken]);
+
+  const validatePublicSlug = async (value: string) => {
+    if (!authToken || !activeProjectId) {
+      return;
+    }
+    if (!value.trim()) {
+      setPublicSlugStatus({ state: 'idle' });
+      return;
+    }
+    setPublicSlugStatus({ state: 'checking' });
+    try {
+      const response = await fetch(
+        `/projects/${activeProjectId}/public-slug/validate?slug=${encodeURIComponent(
+          value
+        )}`,
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      if (!response.ok) {
+        let message = `Slug check failed: ${response.status}`;
+        try {
+          const data = (await response.json()) as { detail?: string };
+          if (data.detail) {
+            message = data.detail;
+          }
+        } catch {
+          // ignore parsing errors
+        }
+        setPublicSlugStatus({ state: 'error', message });
+        return;
+      }
+      const data = (await response.json()) as { slug: string; available: boolean };
+      setPublicSlugDraft(data.slug);
+      setPublicSlugStatus(
+        data.available
+          ? { state: 'available', message: 'Slug is available.' }
+          : { state: 'unavailable', message: 'Slug is already taken.' }
+      );
+    } catch (error) {
+      setPublicSlugStatus({
+        state: 'error',
+        message: error instanceof Error ? error.message : 'Slug check failed.'
+      });
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -522,6 +590,37 @@ export default function App() {
                 <p className="mt-2 text-sm text-slate-200">
                   {project?.isPublished ? 'Published' : 'Draft'}
                 </p>
+                <label className="mt-4 block text-xs uppercase tracking-[0.2em] text-slate-400">
+                  Public slug
+                  <input
+                    type="text"
+                    value={publicSlugDraft}
+                    onChange={(event) => {
+                      setPublicSlugDraft(event.target.value);
+                      setPublicSlugStatus({ state: 'idle' });
+                    }}
+                    onBlur={(event) => {
+                      void validatePublicSlug(event.target.value);
+                    }}
+                    placeholder="your-project"
+                    className="mt-2 w-full rounded-lg border border-slate-800/80 bg-black/60 px-3 py-2 text-sm normal-case text-slate-100 focus:border-cyan-200 focus:outline-none"
+                  />
+                </label>
+                {publicSlugStatus.state !== 'idle' ? (
+                  <p
+                    className={`mt-2 text-xs ${
+                      publicSlugStatus.state === 'available'
+                        ? 'text-cyan-200'
+                        : publicSlugStatus.state === 'checking'
+                          ? 'text-slate-400'
+                          : 'text-rose-300'
+                    }`}
+                  >
+                    {publicSlugStatus.state === 'checking'
+                      ? 'Checking slug availability...'
+                      : publicSlugStatus.message}
+                  </p>
+                ) : null}
                 {publicLink ? (
                   <a
                     href={publicLink}
