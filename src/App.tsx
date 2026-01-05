@@ -350,10 +350,6 @@ export default function App() {
     }
   };
 
-  if (!authToken) {
-    return <AuthScreen />;
-  }
-
   useEffect(() => {
     if (previewPage?.nodes) {
       const currentNodes = useEditorStore.getState().nodes;
@@ -414,6 +410,10 @@ export default function App() {
       }
     };
   }, [editorNodes, resolvedPageId, themeTokens]);
+
+  if (!authToken) {
+    return <AuthScreen />;
+  }
 
   return (
     <ThemeProvider tokens={themeTokens} onTokensChange={setThemeTokens}>
