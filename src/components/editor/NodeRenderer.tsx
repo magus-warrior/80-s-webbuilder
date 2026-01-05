@@ -252,7 +252,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
             updateNodeProps(node.id, {
               x: toPx(nextX),
               y: toPx(nextY)
-            });
+            }, { history: 'debounced' });
           }
         }
       })
@@ -269,7 +269,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
               y: toPx(nextY),
               width: toPx(event.rect.width),
               height: toPx(event.rect.height)
-            });
+            }, { history: 'debounced' });
           }
         }
       });

@@ -6,15 +6,34 @@ type EditorState = {
   nodes: Node[];
   selectedNodeId: string | null;
   currentPageId: string | null;
+  historyPast: EditorSnapshot[];
+  historyFuture: EditorSnapshot[];
   setSelectedNodeId: (nodeId: string | null) => void;
   setCurrentPageId: (pageId: string | null) => void;
   setNodes: (nodes: Node[]) => void;
-  updateNodeProps: (nodeId: string, updates: Record<string, string>) => void;
+  updateNodeProps: (
+    nodeId: string,
+    updates: Record<string, string>,
+    options?: { history?: HistoryMode }
+  ) => void;
   updateNodeName: (nodeId: string, name: string) => void;
   addNode: (node: Node) => void;
   addNodeToContainer: (containerId: string, node: Node) => void;
   moveNodeWithinParent: (parentId: string | null, sourceId: string, targetId: string) => void;
+  undo: () => void;
+  redo: () => void;
 };
+
+type EditorSnapshot = {
+  nodes: Node[];
+  selectedNodeId: string | null;
+  currentPageId: string | null;
+};
+
+type HistoryMode = 'immediate' | 'debounced' | 'none';
+
+const HISTORY_LIMIT = 50;
+const HISTORY_DEBOUNCE_MS = 200;
 
 const updateNodeTree = (
   nodes: Node[],
@@ -131,42 +150,173 @@ const moveNodeInTree = (
   return didUpdate ? nextNodes : nodes;
 };
 
-export const useEditorStore = create<EditorState>((set) => ({
-  nodes: [],
-  selectedNodeId: null,
-  currentPageId: null,
-  setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
-  setCurrentPageId: (pageId) => set({ currentPageId: pageId, selectedNodeId: null }),
-  setNodes: (nodes) => set({ nodes }),
-  updateNodeProps: (nodeId, updates) =>
+export const useEditorStore = create<EditorState>((set, get) => {
+  let pendingSnapshot: EditorSnapshot | null = null;
+  let historyTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  const snapshotState = (state: EditorState): EditorSnapshot => ({
+    nodes: state.nodes,
+    selectedNodeId: state.selectedNodeId,
+    currentPageId: state.currentPageId
+  });
+
+  const commitPendingSnapshot = () => {
+    if (!pendingSnapshot) {
+      return;
+    }
+    const snapshot = pendingSnapshot;
+    pendingSnapshot = null;
+    if (historyTimeout) {
+      clearTimeout(historyTimeout);
+      historyTimeout = null;
+    }
     set((state) => ({
-      nodes: updateNodeTree(state.nodes, nodeId, (node) => ({
-        ...node,
-        props: {
-          ...(node.props ?? {}),
-          ...updates
+      historyPast: [...state.historyPast, snapshot].slice(-HISTORY_LIMIT)
+    }));
+  };
+
+  const queueSnapshot = () => {
+    if (!pendingSnapshot) {
+      pendingSnapshot = snapshotState(get());
+    }
+    if (historyTimeout) {
+      clearTimeout(historyTimeout);
+    }
+    historyTimeout = setTimeout(() => {
+      const snapshot = pendingSnapshot;
+      pendingSnapshot = null;
+      historyTimeout = null;
+      if (!snapshot) {
+        return;
+      }
+      set((state) => ({
+        historyPast: [...state.historyPast, snapshot].slice(-HISTORY_LIMIT)
+      }));
+    }, HISTORY_DEBOUNCE_MS);
+  };
+
+  const pushSnapshot = () => {
+    commitPendingSnapshot();
+    set((state) => ({
+      historyPast: [...state.historyPast, snapshotState(state)].slice(-HISTORY_LIMIT),
+      historyFuture: []
+    }));
+  };
+
+  return {
+    nodes: [],
+    selectedNodeId: null,
+    currentPageId: null,
+    historyPast: [],
+    historyFuture: [],
+    setSelectedNodeId: (nodeId) => {
+      if (get().selectedNodeId === nodeId) {
+        return;
+      }
+      pushSnapshot();
+      set(() => ({
+        selectedNodeId: nodeId
+      }));
+    },
+    setCurrentPageId: (pageId) => {
+      if (get().currentPageId === pageId) {
+        return;
+      }
+      pushSnapshot();
+      set(() => ({
+        currentPageId: pageId,
+        selectedNodeId: null
+      }));
+    },
+    setNodes: (nodes) => {
+      pushSnapshot();
+      set(() => ({
+        nodes
+      }));
+    },
+    updateNodeProps: (nodeId, updates, options) => {
+      const historyMode = options?.history ?? 'immediate';
+      if (historyMode === 'immediate') {
+        pushSnapshot();
+      }
+      if (historyMode === 'debounced') {
+        queueSnapshot();
+        set((state) => ({
+          historyFuture: []
+        }));
+      }
+      set((state) => ({
+        nodes: updateNodeTree(state.nodes, nodeId, (node) => ({
+          ...node,
+          props: {
+            ...(node.props ?? {}),
+            ...updates
+          }
+        }))
+      }));
+    },
+    updateNodeName: (nodeId, name) => {
+      pushSnapshot();
+      set((state) => ({
+        nodes: updateNodeTree(state.nodes, nodeId, (node) => ({
+          ...node,
+          name
+        }))
+      }));
+    },
+    addNode: (node) => {
+      pushSnapshot();
+      set((state) => ({
+        nodes: [...state.nodes, node],
+        selectedNodeId: node.id
+      }));
+    },
+    addNodeToContainer: (containerId, node) => {
+      pushSnapshot();
+      set((state) => ({
+        nodes: addNodeToTree(state.nodes, containerId, node),
+        selectedNodeId: node.id
+      }));
+    },
+    moveNodeWithinParent: (parentId, sourceId, targetId) => {
+      pushSnapshot();
+      set((state) => ({
+        nodes: moveNodeInTree(state.nodes, parentId, sourceId, targetId)
+      }));
+    },
+    undo: () => {
+      commitPendingSnapshot();
+      set((state) => {
+        if (state.historyPast.length === 0) {
+          return state;
         }
-      }))
-    })),
-  updateNodeName: (nodeId, name) =>
-    set((state) => ({
-      nodes: updateNodeTree(state.nodes, nodeId, (node) => ({
-        ...node,
-        name
-      }))
-    })),
-  addNode: (node) =>
-    set((state) => ({
-      nodes: [...state.nodes, node],
-      selectedNodeId: node.id
-    })),
-  addNodeToContainer: (containerId, node) =>
-    set((state) => ({
-      nodes: addNodeToTree(state.nodes, containerId, node),
-      selectedNodeId: node.id
-    })),
-  moveNodeWithinParent: (parentId, sourceId, targetId) =>
-    set((state) => ({
-      nodes: moveNodeInTree(state.nodes, parentId, sourceId, targetId)
-    }))
-}));
+        const previous = state.historyPast[state.historyPast.length - 1];
+        const nextPast = state.historyPast.slice(0, -1);
+        return {
+          nodes: previous.nodes,
+          selectedNodeId: previous.selectedNodeId,
+          currentPageId: previous.currentPageId,
+          historyPast: nextPast,
+          historyFuture: [snapshotState(state), ...state.historyFuture]
+        };
+      });
+    },
+    redo: () => {
+      commitPendingSnapshot();
+      set((state) => {
+        if (state.historyFuture.length === 0) {
+          return state;
+        }
+        const next = state.historyFuture[0];
+        const remaining = state.historyFuture.slice(1);
+        return {
+          nodes: next.nodes,
+          selectedNodeId: next.selectedNodeId,
+          currentPageId: next.currentPageId,
+          historyPast: [...state.historyPast, snapshotState(state)].slice(-HISTORY_LIMIT),
+          historyFuture: remaining
+        };
+      });
+    }
+  };
+});

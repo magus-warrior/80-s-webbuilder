@@ -1,4 +1,4 @@
-import { useMemo, type ChangeEvent, type DragEvent } from 'react';
+import { useEffect, useMemo, type ChangeEvent, type DragEvent } from 'react';
 
 import type { Asset, Node, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
@@ -173,6 +173,8 @@ export default function EditorLayout({
   const addNode = useEditorStore((state) => state.addNode);
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const moveNodeWithinParent = useEditorStore((state) => state.moveNodeWithinParent);
+  const undo = useEditorStore((state) => state.undo);
+  const redo = useEditorStore((state) => state.redo);
   const { tokens, updateTokenValue, cssVariables } = useTheme();
 
   const selectedNode = useMemo(
@@ -268,6 +270,48 @@ export default function EditorLayout({
     }
     event.target.value = '';
   };
+
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+      const tagName = target.tagName.toLowerCase();
+      return (
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        target.isContentEditable
+      );
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      const isMac = navigator.platform.toLowerCase().includes('mac');
+      const modifierPressed = isMac ? event.metaKey : event.ctrlKey;
+      if (!modifierPressed) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+      if (key === 'y') {
+        event.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [redo, undo]);
 
   return (
     <section className="rounded-3xl border-neon-soft bg-black/80 p-6 shadow-2xl neon-glow-soft">
