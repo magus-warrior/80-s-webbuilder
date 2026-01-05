@@ -1,4 +1,4 @@
-import { useMemo, type ChangeEvent } from 'react';
+import { useMemo, type ChangeEvent, type DragEvent } from 'react';
 
 import type { Asset, Node, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
@@ -176,6 +176,29 @@ export default function EditorLayout({
     }
     addNode(buildNodeFromTemplate(template));
   };
+  const handleBlockDragStart = (templateName: string) => (event: DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.setData('application/x-block-template', templateName);
+    event.dataTransfer.setData('text/plain', templateName);
+    event.dataTransfer.effectAllowed = 'copy';
+  };
+  const handleCanvasDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+  const handleCanvasDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const templateName =
+      event.dataTransfer.getData('application/x-block-template') ||
+      event.dataTransfer.getData('text/plain');
+    if (!templateName) {
+      return;
+    }
+    const template = blockTemplates.find((item) => item.key === templateName)?.template;
+    if (!template) {
+      return;
+    }
+    addNode(buildNodeFromTemplate(template));
+  };
   const handleAssetSelect = (asset: Asset) => {
     if (!selectedNode) {
       return;
@@ -299,6 +322,8 @@ export default function EditorLayout({
                 key={block.key}
                 type="button"
                 onClick={() => handleAddBlock(block.key)}
+                onDragStart={handleBlockDragStart(block.key)}
+                draggable
                 className="flex w-full items-center justify-between rounded-xl border border-slate-900/80 bg-black/60 px-3 py-2 text-left text-sm text-slate-200 transition hover:border-transparent hover:bg-neon-gradient hover:text-slate-950 hover:neon-glow-soft"
               >
                 <span>{block.label}</span>
@@ -307,7 +332,7 @@ export default function EditorLayout({
             ))}
           </div>
           <div className="mt-auto rounded-xl border border-slate-900/80 bg-black/60 p-3 text-xs text-slate-300">
-            Tip: Drag blocks onto the canvas to compose your page.
+            Tip: Drag blocks onto the canvas or into containers to nest layouts.
           </div>
         </aside>
 
@@ -324,6 +349,8 @@ export default function EditorLayout({
           <div
             className="flex-1 rounded-2xl border-neon-soft bg-black/80 p-6"
             style={cssVariables}
+            onDragOver={handleCanvasDragOver}
+            onDrop={handleCanvasDrop}
           >
             {nodes.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-300">
