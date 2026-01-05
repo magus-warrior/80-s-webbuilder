@@ -5,6 +5,7 @@ import interact from 'interactjs';
 import type { Node } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
+import { useTheme } from './ThemeProvider';
 
 type NodeRendererProps = {
   node: Node;
@@ -69,14 +70,36 @@ const stylePropHandlers: Record<
   }
 };
 
-const resolveNodeStyles = (node: Node): CSSProperties => {
+const normalizeTokenName = (value: string) =>
+  value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+const buildTokenVarMap = (tokens: { name: string }[]) =>
+  tokens.reduce<Record<string, string>>((map, token) => {
+    const normalized = normalizeTokenName(token.name);
+    if (normalized) {
+      map[normalized] = `var(--theme-${normalized})`;
+    }
+    return map;
+  }, {});
+
+const resolveTokenValue = (value: string, tokenMap: Record<string, string>) => {
+  const trimmed = value.trim();
+  if (trimmed.startsWith('var(')) {
+    return value;
+  }
+  const normalized = normalizeTokenName(trimmed);
+  return tokenMap[normalized] ?? value;
+};
+
+const resolveNodeStyles = (node: Node, tokenMap: Record<string, string>): CSSProperties => {
   const style: CSSProperties = {};
   const props = node.props ?? {};
 
   Object.entries(props).forEach(([key, value]) => {
     const handler = stylePropHandlers[key];
-    if (handler) {
-      handler(value, style);
+    if (handler && typeof value === 'string') {
+      const resolvedValue = resolveTokenValue(value, tokenMap);
+      handler(resolvedValue, style);
     }
   });
 
@@ -98,26 +121,26 @@ const renderChildren = (node: Node, interactive: boolean) =>
     <NodeRenderer key={child.id} node={child} interactive={interactive} />
   )) ?? null;
 
-const renderTextNode = (node: Node, _interactive: boolean) => (
-  <p style={resolveNodeStyles(node)} className="text-sm text-slate-100">
+const renderTextNode = (node: Node, _interactive: boolean, tokenMap: Record<string, string>) => (
+  <p style={resolveNodeStyles(node, tokenMap)} className="text-sm text-slate-100">
     {node.props?.content ?? node.name}
   </p>
 );
 
-const renderButtonNode = (node: Node, _interactive: boolean) => (
+const renderButtonNode = (node: Node, _interactive: boolean, tokenMap: Record<string, string>) => (
   <button
     type="button"
-    style={resolveNodeStyles(node)}
+    style={resolveNodeStyles(node, tokenMap)}
     className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 shadow-lg neon-glow-soft transition hover:brightness-110"
   >
     {node.props?.label ?? node.name}
   </button>
 );
 
-const renderImageNode = (node: Node, _interactive: boolean) => {
+const renderImageNode = (node: Node, _interactive: boolean, tokenMap: Record<string, string>) => {
   const src = node.props?.src;
   const alt = node.props?.alt ?? node.name;
-  const style = resolveNodeStyles(node);
+  const style = resolveNodeStyles(node, tokenMap);
 
   if (!src) {
     return (
@@ -140,14 +163,21 @@ const renderImageNode = (node: Node, _interactive: boolean) => {
   );
 };
 
-const renderContainerNode = (node: Node, interactive: boolean) => (
-  <div style={resolveNodeStyles(node)} className="rounded-2xl border-neon-soft bg-black/40 p-4">
+const renderContainerNode = (
+  node: Node,
+  interactive: boolean,
+  tokenMap: Record<string, string>
+) => (
+  <div
+    style={resolveNodeStyles(node, tokenMap)}
+    className="rounded-2xl border-neon-soft bg-black/40 p-4"
+  >
     {renderChildren(node, interactive)}
   </div>
 );
 
 const nodeRenderers: Partial<
-  Record<Node['type'], (node: Node, interactive: boolean) => JSX.Element>
+  Record<Node['type'], (node: Node, interactive: boolean, tokenMap: Record<string, string>) => JSX.Element>
 > = {
   text: renderTextNode,
   button: renderButtonNode,
@@ -172,12 +202,14 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
   const addNodeToContainer = useEditorStore((state) => state.addNodeToContainer);
   const gridSize = useEditorStore((state) => state.gridSize);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const { tokens } = useTheme();
   const x = parseLength(node.props?.x);
   const y = parseLength(node.props?.y);
   const width = node.props?.width;
   const height = node.props?.height;
   const positionRef = useRef({ x, y });
   const renderer = nodeRenderers[node.type];
+  const tokenMap = useMemo(() => buildTokenVarMap(tokens), [tokens]);
   const isSelected = selectedNodeId === node.id;
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
     if (!interactive) {
@@ -306,7 +338,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
             : 'rounded-2xl'
         }
       >
-        {renderer(node, interactive)}
+        {renderer(node, interactive, tokenMap)}
       </div>
     );
   }
@@ -322,7 +354,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
             }`
           : 'rounded-2xl border border-slate-900/80 bg-black/40 p-4'
       }
-      style={{ ...resolveNodeStyles(node), ...positionStyle }}
+      style={{ ...resolveNodeStyles(node, tokenMap), ...positionStyle }}
     >
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{node.type}</div>
       <p className="mt-2 text-sm text-slate-200">{node.name}</p>

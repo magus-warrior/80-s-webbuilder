@@ -24,9 +24,9 @@ export const templatePresets: Record<string, NodeTemplate> = {
     type: 'section',
     name: 'Hero Section',
     props: {
-      backgroundColor: '#0f172a',
+      backgroundColor: 'var(--theme-surface-card)',
       padding: '32px',
-      borderRadius: '24px'
+      borderRadius: 'var(--theme-radius-lg)'
     },
     children: [
       {
@@ -36,7 +36,7 @@ export const templatePresets: Record<string, NodeTemplate> = {
           content: 'Launch your next studio drop',
           fontSize: '28px',
           fontWeight: '600',
-          color: '#f8fafc',
+          color: 'var(--theme-text-primary)',
           margin: '0 0 12px 0'
         }
       },
@@ -45,7 +45,7 @@ export const templatePresets: Record<string, NodeTemplate> = {
         name: 'Subheading',
         props: {
           content: 'Capture attention with bold layouts and neon accents.',
-          color: '#94a3b8',
+          color: 'var(--theme-text-muted)',
           margin: '0 0 20px 0'
         }
       },
@@ -65,8 +65,8 @@ export const templatePresets: Record<string, NodeTemplate> = {
       columns: '3',
       gap: '16px',
       padding: '24px',
-      backgroundColor: '#0b1120',
-      borderRadius: '24px'
+      backgroundColor: 'var(--theme-surface-card)',
+      borderRadius: 'var(--theme-radius-lg)'
     },
     children: [
       {
@@ -102,17 +102,17 @@ export const templatePresets: Record<string, NodeTemplate> = {
       columns: '3',
       gap: '16px',
       padding: '24px',
-      backgroundColor: '#0b1120',
-      borderRadius: '24px'
+      backgroundColor: 'var(--theme-surface-card)',
+      borderRadius: 'var(--theme-radius-lg)'
     },
     children: [
       {
         type: 'section',
         name: 'Starter Tier',
         props: {
-          backgroundColor: '#111827',
+          backgroundColor: 'var(--theme-surface-elevated)',
           padding: '20px',
-          borderRadius: '20px'
+          borderRadius: 'var(--theme-radius-lg)'
         },
         children: [
           {
@@ -130,7 +130,7 @@ export const templatePresets: Record<string, NodeTemplate> = {
             name: 'Starter Price',
             props: {
               content: '$39 / month',
-              color: '#94a3b8',
+              color: 'var(--theme-text-muted)',
               margin: '0 0 16px 0'
             }
           },
@@ -147,9 +147,9 @@ export const templatePresets: Record<string, NodeTemplate> = {
         type: 'section',
         name: 'Studio Tier',
         props: {
-          backgroundColor: '#111827',
+          backgroundColor: 'var(--theme-surface-elevated)',
           padding: '20px',
-          borderRadius: '20px'
+          borderRadius: 'var(--theme-radius-lg)'
         },
         children: [
           {
@@ -167,7 +167,7 @@ export const templatePresets: Record<string, NodeTemplate> = {
             name: 'Studio Price',
             props: {
               content: '$89 / month',
-              color: '#94a3b8',
+              color: 'var(--theme-text-muted)',
               margin: '0 0 16px 0'
             }
           },
@@ -184,9 +184,9 @@ export const templatePresets: Record<string, NodeTemplate> = {
         type: 'section',
         name: 'Premium Tier',
         props: {
-          backgroundColor: '#111827',
+          backgroundColor: 'var(--theme-surface-elevated)',
           padding: '20px',
-          borderRadius: '20px'
+          borderRadius: 'var(--theme-radius-lg)'
         },
         children: [
           {
@@ -204,7 +204,7 @@ export const templatePresets: Record<string, NodeTemplate> = {
             name: 'Premium Price',
             props: {
               content: '$149 / month',
-              color: '#94a3b8',
+              color: 'var(--theme-text-muted)',
               margin: '0 0 16px 0'
             }
           },
@@ -226,17 +226,17 @@ export const templatePresets: Record<string, NodeTemplate> = {
       columns: '2',
       gap: '16px',
       padding: '24px',
-      backgroundColor: '#0b1120',
-      borderRadius: '24px'
+      backgroundColor: 'var(--theme-surface-card)',
+      borderRadius: 'var(--theme-radius-lg)'
     },
     children: [
       {
         type: 'section',
         name: 'Testimonial One',
         props: {
-          backgroundColor: '#111827',
+          backgroundColor: 'var(--theme-surface-elevated)',
           padding: '18px',
-          borderRadius: '18px'
+          borderRadius: 'var(--theme-radius-lg)'
         },
         children: [
           {
@@ -252,7 +252,7 @@ export const templatePresets: Record<string, NodeTemplate> = {
             name: 'Attribution One',
             props: {
               content: '— Nova Creative, Director',
-              color: '#94a3b8'
+              color: 'var(--theme-text-muted)'
             }
           }
         ]
@@ -261,9 +261,9 @@ export const templatePresets: Record<string, NodeTemplate> = {
         type: 'section',
         name: 'Testimonial Two',
         props: {
-          backgroundColor: '#111827',
+          backgroundColor: 'var(--theme-surface-elevated)',
           padding: '18px',
-          borderRadius: '18px'
+          borderRadius: 'var(--theme-radius-lg)'
         },
         children: [
           {
@@ -279,7 +279,7 @@ export const templatePresets: Record<string, NodeTemplate> = {
             name: 'Attribution Two',
             props: {
               content: '— Atelier West, Founder',
-              color: '#94a3b8'
+              color: 'var(--theme-text-muted)'
             }
           }
         ]
