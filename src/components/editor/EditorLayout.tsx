@@ -30,6 +30,22 @@ const findNodeById = (nodes: Node[], nodeId: string | null): Node | null => {
   return null;
 };
 
+type LayerItem = {
+  node: Node;
+  depth: number;
+  parentId: string | null;
+};
+
+const buildLayerItems = (
+  nodes: Node[],
+  depth = 0,
+  parentId: string | null = null
+): LayerItem[] =>
+  nodes.flatMap((node) => [
+    { node, depth, parentId },
+    ...(node.children ? buildLayerItems(node.children, depth + 1, node.id) : [])
+  ]);
+
 const styleFields = [
   { label: 'Text color', key: 'color', placeholder: '#f8fafc' },
   { label: 'Background', key: 'background', placeholder: '#0f172a' },
@@ -153,13 +169,17 @@ export default function EditorLayout({
   const nodes = useEditorStore((state) => state.nodes);
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
+  const updateNodeName = useEditorStore((state) => state.updateNodeName);
   const addNode = useEditorStore((state) => state.addNode);
+  const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
+  const moveNodeWithinParent = useEditorStore((state) => state.moveNodeWithinParent);
   const { tokens, updateTokenValue, cssVariables } = useTheme();
 
   const selectedNode = useMemo(
     () => findNodeById(nodes, selectedNodeId),
     [nodes, selectedNodeId]
   );
+  const layerItems = useMemo(() => buildLayerItems(nodes), [nodes]);
   const textKey = selectedNode?.type === 'button' ? 'label' : 'content';
   const textValue = selectedNode?.props?.[textKey] ?? '';
   const handleResetStyles = () => {
@@ -198,6 +218,32 @@ export default function EditorLayout({
       return;
     }
     addNode(buildNodeFromTemplate(template));
+  };
+  const handleLayerDragStart = (item: LayerItem) => (event: DragEvent<HTMLDivElement>) => {
+    event.dataTransfer.setData('application/x-editor-node', item.node.id);
+    event.dataTransfer.setData('application/x-editor-parent', item.parentId ?? 'root');
+    event.dataTransfer.effectAllowed = 'move';
+  };
+  const handleLayerDragOver = (item: LayerItem) => (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const sourceParent = event.dataTransfer.getData('application/x-editor-parent');
+    const targetParent = item.parentId ?? 'root';
+    if (sourceParent && sourceParent !== targetParent) {
+      event.dataTransfer.dropEffect = 'none';
+      return;
+    }
+    event.dataTransfer.dropEffect = 'move';
+  };
+  const handleLayerDrop = (item: LayerItem) => (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const sourceId = event.dataTransfer.getData('application/x-editor-node');
+    const sourceParent = event.dataTransfer.getData('application/x-editor-parent');
+    const targetParent = item.parentId ?? 'root';
+    if (!sourceId || sourceParent !== targetParent || sourceId === item.node.id) {
+      return;
+    }
+    moveNodeWithinParent(sourceParent === 'root' ? null : sourceParent, sourceId, item.node.id);
+    setSelectedNodeId(sourceId);
   };
   const handleAssetSelect = (asset: Asset) => {
     if (!selectedNode) {
@@ -374,6 +420,59 @@ export default function EditorLayout({
         </div>
 
         <aside className="flex h-full flex-col gap-4 rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4">
+          <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
+                Layers
+              </h3>
+              <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
+                {layerItems.length}
+              </span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {layerItems.length === 0 ? (
+                <p className="text-xs text-slate-400">No layers yet.</p>
+              ) : (
+                layerItems.map((item) => {
+                  const isSelected = selectedNodeId === item.node.id;
+                  return (
+                    <div
+                      key={item.node.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedNodeId(item.node.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          setSelectedNodeId(item.node.id);
+                        }
+                      }}
+                      draggable
+                      onDragStart={handleLayerDragStart(item)}
+                      onDragOver={handleLayerDragOver(item)}
+                      onDrop={handleLayerDrop(item)}
+                      className={`flex items-center gap-2 rounded-lg border px-2 py-2 text-left text-xs transition ${
+                        isSelected
+                          ? 'border-cyan-300/70 bg-cyan-500/10 text-cyan-100'
+                          : 'border-slate-900/80 bg-black/60 text-slate-300 hover:border-cyan-400/60'
+                      }`}
+                      style={{ paddingLeft: `${8 + item.depth * 12}px` }}
+                    >
+                      <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
+                        {item.node.type}
+                      </span>
+                      <input
+                        value={item.node.name}
+                        onChange={(event) => updateNodeName(item.node.id, event.target.value)}
+                        onClick={(event) => event.stopPropagation()}
+                        onFocus={() => setSelectedNodeId(item.node.id)}
+                        className="flex-1 rounded-md border border-slate-800/80 bg-slate-950/70 px-2 py-1 text-xs text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                      />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-transparent bg-neon-gradient bg-clip-text">
               Inspector
