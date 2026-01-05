@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
+import json
 import re
 import shutil
 import uuid
@@ -90,7 +91,9 @@ def publish_project(
         project.is_published = False
         project.published_at = None
     if project.public_slug:
-        project.data = {**(project.data or {}), "publicSlug": project.public_slug}
+        project_data = coerce_project_data(project)
+        project_data["publicSlug"] = project.public_slug
+        project.data = project_data
     db.commit()
     db.refresh(project)
     return serialize_project(project)
@@ -229,7 +232,7 @@ def is_public_slug_available(slug: str, project: Project, db: Session) -> bool:
 
 
 def serialize_project(project: Project) -> dict[str, Any]:
-    data = project.data or {}
+    data = coerce_project_data(project)
     response = {
         **data,
         "id": str(project.id),
@@ -243,7 +246,7 @@ def serialize_project(project: Project) -> dict[str, Any]:
 
 
 def serialize_project_summary(project: Project) -> dict[str, Any]:
-    data = project.data or {}
+    data = coerce_project_data(project)
     return {
         "id": str(project.id),
         "name": project.name,
@@ -263,6 +266,19 @@ def serialize_asset(asset: Asset) -> dict[str, Any]:
         "filename": asset.filename,
         "createdAt": asset.created_at.isoformat() if asset.created_at else None,
     }
+
+
+def coerce_project_data(project: Project) -> dict[str, Any]:
+    data = project.data
+    if isinstance(data, dict):
+        return data
+    if isinstance(data, str):
+        try:
+            parsed = json.loads(data)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
 
 
 @app.get("/projects/{project_id}/public-slug/validate")
