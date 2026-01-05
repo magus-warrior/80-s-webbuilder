@@ -170,6 +170,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
   const addNodeToContainer = useEditorStore((state) => state.addNodeToContainer);
+  const gridSize = useEditorStore((state) => state.gridSize);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const x = parseLength(node.props?.x);
   const y = parseLength(node.props?.y);
@@ -241,8 +242,17 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
       return;
     }
 
+    const snapGridSize = Math.max(4, gridSize);
+    const snapGrid = interact.snappers.grid({ x: snapGridSize, y: snapGridSize });
+    const snapModifiers = [
+      interact.modifiers.snap({
+        targets: [snapGrid]
+      })
+    ];
+
     const interactable = interact(element)
       .draggable({
+        modifiers: snapModifiers,
         listeners: {
           move(event) {
             const { x: currentX, y: currentY } = positionRef.current;
@@ -258,6 +268,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
       })
       .resizable({
         edges: { left: true, right: true, bottom: true, top: true },
+        modifiers: snapModifiers,
         listeners: {
           move(event) {
             const { x: currentX, y: currentY } = positionRef.current;
@@ -277,7 +288,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
     return () => {
       interactable.unset();
     };
-  }, [interactive, node.id, updateNodeProps]);
+  }, [gridSize, interactive, node.id, updateNodeProps]);
 
   if (renderer) {
     return (

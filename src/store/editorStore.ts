@@ -6,11 +6,13 @@ type EditorState = {
   nodes: Node[];
   selectedNodeId: string | null;
   currentPageId: string | null;
+  gridSize: number;
   historyPast: EditorSnapshot[];
   historyFuture: EditorSnapshot[];
   setSelectedNodeId: (nodeId: string | null) => void;
   setCurrentPageId: (pageId: string | null) => void;
   setNodes: (nodes: Node[]) => void;
+  setGridSize: (gridSize: number) => void;
   updateNodeProps: (
     nodeId: string,
     updates: Record<string, string>,
@@ -207,6 +209,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     nodes: [],
     selectedNodeId: null,
     currentPageId: null,
+    gridSize: 16,
     historyPast: [],
     historyFuture: [],
     setSelectedNodeId: (nodeId) => {
@@ -232,6 +235,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
       pushSnapshot();
       set(() => ({
         nodes
+      }));
+    },
+    setGridSize: (gridSize) => {
+      set(() => ({
+        gridSize
       }));
     },
     updateNodeProps: (nodeId, updates, options) => {
