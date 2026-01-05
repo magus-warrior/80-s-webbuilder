@@ -1,9 +1,10 @@
-import type { CSSProperties, MouseEvent } from 'react';
+import type { CSSProperties, DragEvent, MouseEvent } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import interact from 'interactjs';
 
 import type { Node } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
+import { blockTemplates, buildNodeFromTemplate } from './templates';
 
 type NodeRendererProps = {
   node: Node;
@@ -168,6 +169,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
+  const addNodeToContainer = useEditorStore((state) => state.addNodeToContainer);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const x = parseLength(node.props?.x);
   const y = parseLength(node.props?.y);
@@ -182,6 +184,32 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
     }
     event.stopPropagation();
     setSelectedNodeId(node.id);
+  };
+  const handleContainerDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (node.type !== 'container') {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+  const handleContainerDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (node.type !== 'container') {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const templateName =
+      event.dataTransfer.getData('application/x-block-template') ||
+      event.dataTransfer.getData('text/plain');
+    if (!templateName) {
+      return;
+    }
+    const template = blockTemplates.find((item) => item.key === templateName)?.template;
+    if (!template) {
+      return;
+    }
+    addNodeToContainer(node.id, buildNodeFromTemplate(template));
   };
   const positionStyle = useMemo(() => {
     const style: CSSProperties = {
@@ -255,6 +283,8 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
     return (
       <div
         onClick={handleClick}
+        onDragOver={handleContainerDragOver}
+        onDrop={handleContainerDrop}
         ref={wrapperRef}
         style={positionStyle}
         className={
