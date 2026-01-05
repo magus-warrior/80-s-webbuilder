@@ -173,6 +173,8 @@ export default function EditorLayout({
   const addNode = useEditorStore((state) => state.addNode);
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const moveNodeWithinParent = useEditorStore((state) => state.moveNodeWithinParent);
+  const gridSize = useEditorStore((state) => state.gridSize);
+  const setGridSize = useEditorStore((state) => state.setGridSize);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
   const { tokens, updateTokenValue, cssVariables } = useTheme();
@@ -269,6 +271,14 @@ export default function EditorLayout({
       });
     }
     event.target.value = '';
+  };
+  const handleGridSizeChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextValue = Number.parseInt(event.target.value, 10);
+    if (Number.isNaN(nextValue)) {
+      setGridSize(4);
+      return;
+    }
+    setGridSize(Math.max(4, Math.min(64, nextValue)));
   };
 
   useEffect(() => {
@@ -431,35 +441,61 @@ export default function EditorLayout({
             <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-transparent bg-neon-gradient bg-clip-text">
               Canvas
             </h3>
-            <div className="flex gap-2 text-xs text-slate-300">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
               <span className="rounded-full border border-slate-700 px-2 py-1">Desktop</span>
               <span className="rounded-full border border-slate-700 px-2 py-1">100%</span>
+              <label className="flex items-center gap-2 rounded-full border border-slate-700 px-2 py-1">
+                <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
+                  Grid
+                </span>
+                <input
+                  type="number"
+                  min={4}
+                  max={64}
+                  step={1}
+                  value={gridSize}
+                  onChange={handleGridSizeChange}
+                  className="w-14 rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-1 text-xs text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                />
+                <span className="text-[0.6rem] text-slate-500">px</span>
+              </label>
             </div>
           </div>
           <div
-            className="flex-1 rounded-2xl border-neon-soft bg-black/80 p-6"
+            className="relative flex-1 rounded-2xl border-neon-soft bg-black/80 p-6"
             style={cssVariables}
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
           >
-            {nodes.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-300">
-                <p className="text-sm">Drop components here to start building.</p>
-                <button
-                  type="button"
-                  onClick={() => handleAddBlock('Hero')}
-                  className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 neon-glow-soft"
-                >
-                  Add section
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {nodes.map((node) => (
-                  <NodeRenderer key={node.id} node={node} />
-                ))}
-              </div>
-            )}
+            <div
+              className="pointer-events-none absolute inset-0 rounded-2xl"
+              style={{
+                backgroundImage:
+                  'linear-gradient(to right, rgba(148, 163, 184, 0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(148, 163, 184, 0.18) 1px, transparent 1px)',
+                backgroundSize: `${gridSize}px ${gridSize}px`,
+                opacity: 0.22
+              }}
+            />
+            <div className="relative z-10 h-full">
+              {nodes.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-300">
+                  <p className="text-sm">Drop components here to start building.</p>
+                  <button
+                    type="button"
+                    onClick={() => handleAddBlock('Hero')}
+                    className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 neon-glow-soft"
+                  >
+                    Add section
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {nodes.map((node) => (
+                    <NodeRenderer key={node.id} node={node} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
