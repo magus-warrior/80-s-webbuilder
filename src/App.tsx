@@ -58,6 +58,15 @@ export default function App() {
   const saveRequestId = useRef(0);
   const lastLoadedProjectId = useRef<string | null>(null);
 
+  const handleAuthFailure = (response: Response, onFail?: () => void) => {
+    if (response.status === 401 || response.status === 403) {
+      onFail?.();
+      clearAuth();
+      return true;
+    }
+    return false;
+  };
+
   const parseProjectIdFromPath = () => {
     const match = window.location.pathname.match(/projects\/([^/]+)/);
     return match?.[1] ?? null;
@@ -124,6 +133,13 @@ export default function App() {
         },
         body: JSON.stringify(nextProject)
       });
+      if (
+        handleAuthFailure(response, () =>
+          setProjectError('Session expired. Please sign in again.')
+        )
+      ) {
+        return;
+      }
       if (!response.ok) {
         throw new Error(`Save failed: ${response.status}`);
       }
@@ -164,6 +180,13 @@ export default function App() {
         },
         body: JSON.stringify(payload)
       });
+      if (
+        handleAuthFailure(response, () =>
+          setProjectError('Session expired. Please sign in again.')
+        )
+      ) {
+        return;
+      }
       if (!response.ok) {
         let message = `Publish update failed: ${response.status}`;
         try {
@@ -221,6 +244,13 @@ export default function App() {
         const response = await fetch('/projects', {
           headers: { Authorization: `Bearer ${authToken}` }
         });
+        if (
+          handleAuthFailure(response, () =>
+            setProjectError('Session expired. Please sign in again.')
+          )
+        ) {
+          return;
+        }
         if (!response.ok) {
           throw new Error(`Project list failed: ${response.status}`);
         }
@@ -286,6 +316,13 @@ export default function App() {
         const response = await fetch('/assets', {
           headers: { Authorization: `Bearer ${authToken}` }
         });
+        if (
+          handleAuthFailure(response, () =>
+            setAssetError('Session expired. Please sign in again.')
+          )
+        ) {
+          return;
+        }
         if (!response.ok) {
           throw new Error(`Asset list failed: ${response.status}`);
         }
@@ -312,6 +349,13 @@ export default function App() {
         const response = await fetch(`/projects/${activeProjectId}`, {
           headers: { Authorization: `Bearer ${authToken}` }
         });
+        if (
+          handleAuthFailure(response, () =>
+            setProjectError('Session expired. Please sign in again.')
+          )
+        ) {
+          return;
+        }
         if (!response.ok) {
           throw new Error(`Project request failed: ${response.status}`);
         }
@@ -347,6 +391,13 @@ export default function App() {
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
+      if (
+        handleAuthFailure(response, () =>
+          setProjectError('Session expired. Please sign in again.')
+        )
+      ) {
+        return;
+      }
       if (!response.ok) {
         let message = `Slug check failed: ${response.status}`;
         try {
