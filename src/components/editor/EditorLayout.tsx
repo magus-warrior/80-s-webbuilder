@@ -1,10 +1,11 @@
-import { useEffect, useMemo, type ChangeEvent, type DragEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type DragEvent } from 'react';
 
 import type { Asset, Node, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import ColorControl from './ColorControl';
 import NodeRenderer from './NodeRenderer';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
+import { themePresets } from './themePresets';
 import { useTheme } from './ThemeProvider';
 
 const findNodeById = (nodes: Node[], nodeId: string | null): Node | null => {
@@ -59,6 +60,10 @@ const styleFields = [
 ];
 
 const colorFieldKeys = new Set(['color', 'background']);
+const minimalStyleFieldKeys = new Set(['color', 'background', 'padding', 'margin', 'gap']);
+const minimalStyleFields = styleFields.filter((field) =>
+  minimalStyleFieldKeys.has(field.key)
+);
 
 const styleSelectFields = [
   {
@@ -177,7 +182,11 @@ export default function EditorLayout({
   const setGridSize = useEditorStore((state) => state.setGridSize);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
-  const { tokens, updateTokenValue, cssVariables } = useTheme();
+  const { tokens, updateTokenValue, applyTokens, cssVariables } = useTheme();
+  const [isThemeAdvanced, setIsThemeAdvanced] = useState(false);
+  const [preserveThemeValues, setPreserveThemeValues] = useState(false);
+  const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [isStyleAdvanced, setIsStyleAdvanced] = useState(false);
 
   const selectedNode = useMemo(
     () => findNodeById(nodes, selectedNodeId),
@@ -279,6 +288,14 @@ export default function EditorLayout({
       return;
     }
     setGridSize(Math.max(4, Math.min(64, nextValue)));
+  };
+  const handleApplyPreset = (presetId: string) => {
+    const preset = themePresets.find((item) => item.id === presetId);
+    if (!preset) {
+      return;
+    }
+    applyTokens(preset.tokens, { preserveExistingValues: preserveThemeValues });
+    setActivePresetId(presetId);
   };
 
   useEffect(() => {
@@ -582,9 +599,18 @@ export default function EditorLayout({
                 </div>
               )}
               <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Style</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Style</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsStyleAdvanced((prev) => !prev)}
+                    className="rounded-full border border-slate-700/80 px-2 py-1 text-[0.55rem] uppercase tracking-[0.2em] text-slate-400 transition hover:border-cyan-400/60 hover:text-slate-200"
+                  >
+                    {isStyleAdvanced ? 'Hide advanced' : 'Advanced styles'}
+                  </button>
+                </div>
                 <div className="mt-3 space-y-3">
-                  {styleFields.map((field) => (
+                  {(isStyleAdvanced ? styleFields : minimalStyleFields).map((field) => (
                     <div key={field.key} className="block">
                       {colorFieldKeys.has(field.key) ? (
                         <ColorControl
@@ -615,29 +641,31 @@ export default function EditorLayout({
                       )}
                     </div>
                   ))}
-                  {styleSelectFields.map((field) => (
-                    <label key={field.key} className="block">
-                      <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                        {field.label}
-                      </span>
-                      <select
-                        value={selectedNode.props?.[field.key] ?? ''}
-                        onChange={(event) =>
-                          updateNodeProps(selectedNode.id, {
-                            [field.key]: event.target.value
-                          })
-                        }
-                        className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                      >
-                        {field.options.map((option) => (
-                          <option key={option.value || 'default'} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ))}
-                  {selectedNode.type === 'container'
+                  {isStyleAdvanced
+                    ? styleSelectFields.map((field) => (
+                        <label key={field.key} className="block">
+                          <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                            {field.label}
+                          </span>
+                          <select
+                            value={selectedNode.props?.[field.key] ?? ''}
+                            onChange={(event) =>
+                              updateNodeProps(selectedNode.id, {
+                                [field.key]: event.target.value
+                              })
+                            }
+                            className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                          >
+                            {field.options.map((option) => (
+                              <option key={option.value || 'default'} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ))
+                    : null}
+                  {isStyleAdvanced && selectedNode.type === 'container'
                     ? containerStyleFields.map((field) => (
                         <label key={field.key} className="block">
                           <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
@@ -717,40 +745,90 @@ export default function EditorLayout({
                 </div>
               )}
               <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Theme</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Theme</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsThemeAdvanced((prev) => !prev)}
+                    className="rounded-full border border-slate-700/80 px-2 py-1 text-[0.55rem] uppercase tracking-[0.2em] text-slate-400 transition hover:border-cyan-400/60 hover:text-slate-200"
+                  >
+                    {isThemeAdvanced ? 'Hide advanced' : 'Advanced styles'}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Apply a preset or fine-tune the tokens below.
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {themePresets.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handleApplyPreset(preset.id)}
+                      className={`flex flex-col rounded-lg border px-3 py-2 text-left text-xs transition ${
+                        activePresetId === preset.id
+                          ? 'border-fuchsia-300/70 bg-fuchsia-500/10 text-fuchsia-100'
+                          : 'border-slate-900/80 bg-black/60 text-slate-300 hover:border-fuchsia-400/60'
+                      }`}
+                    >
+                      <span className="text-sm font-semibold text-slate-100">
+                        {preset.name}
+                      </span>
+                      <span className="mt-1 text-[0.65rem] text-slate-500">
+                        {preset.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-3 flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                  <input
+                    type="checkbox"
+                    checked={preserveThemeValues}
+                    onChange={(event) => setPreserveThemeValues(event.target.checked)}
+                    className="h-4 w-4 rounded border border-slate-600 bg-slate-950/80 text-cyan-400 focus:neon-ring"
+                  />
+                  Preserve custom values
+                </label>
                 <div className="mt-3 space-y-3">
-                  {tokens.length > 0 ? (
-                    tokens.map((token) => (
-                      <div key={token.name} className="block">
-                        {token.category === 'color' ? (
-                          <ColorControl
-                            label={token.name}
-                            value={token.value}
-                            onChange={(nextValue) => updateTokenValue(token.name, nextValue)}
-                            description={token.description}
-                          />
-                        ) : (
-                          <label className="block">
-                            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                              {token.name}
-                            </span>
-                            <input
+                  {isThemeAdvanced ? (
+                    tokens.length > 0 ? (
+                      tokens.map((token) => (
+                        <div key={token.name} className="block">
+                          {token.category === 'color' ? (
+                            <ColorControl
+                              label={token.name}
                               value={token.value}
-                              onChange={(event) => updateTokenValue(token.name, event.target.value)}
-                              className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                              placeholder={token.description ?? 'Theme token value'}
+                              onChange={(nextValue) => updateTokenValue(token.name, nextValue)}
+                              description={token.description}
                             />
-                            {token.description ? (
-                              <span className="mt-2 block text-[0.65rem] text-slate-500">
-                                {token.description}
+                          ) : (
+                            <label className="block">
+                              <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                                {token.name}
                               </span>
-                            ) : null}
-                          </label>
-                        )}
-                      </div>
-                    ))
+                              <input
+                                value={token.value}
+                                onChange={(event) =>
+                                  updateTokenValue(token.name, event.target.value)
+                                }
+                                className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                                placeholder={token.description ?? 'Theme token value'}
+                              />
+                              {token.description ? (
+                                <span className="mt-2 block text-[0.65rem] text-slate-500">
+                                  {token.description}
+                                </span>
+                              ) : null}
+                            </label>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-500">No theme tokens loaded yet.</p>
+                    )
                   ) : (
-                    <p className="text-xs text-slate-500">No theme tokens loaded yet.</p>
+                    <p className="text-xs text-slate-500">
+                      Advanced tokens are hidden. Toggle to edit individual values.
+                    </p>
                   )}
                 </div>
               </div>
