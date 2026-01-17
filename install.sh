@@ -62,6 +62,8 @@ if [[ "${venv_choice,,}" == "y" ]]; then
     "$python_cmd" -m venv "$venv_dir"
   fi
   python_cmd="$venv_dir/bin/python"
+  export VIRTUAL_ENV="$venv_dir"
+  export PATH="$venv_dir/bin:$PATH"
 else
   echo "Error: virtualenv is required for installation." >&2
   exit 1
@@ -120,9 +122,16 @@ fi
 
 mode_choice=$(prompt_choice "Install as systemd service or manual run? [systemd/manual] (systemd): " "systemd")
 if [[ "${mode_choice,,}" == "systemd" ]] && command -v systemctl >/dev/null 2>&1; then
+  service_user_default="${SUDO_USER:-$USER}"
+  service_user=$(prompt_choice "Enter systemd service user (default: ${service_user_default}): " "$service_user_default")
+  service_group_default="$(id -gn "$service_user" 2>/dev/null || echo "$service_user")"
+  service_group=$(prompt_choice "Enter systemd service group (default: ${service_group_default}): " "$service_group_default")
   echo "Installing systemd service from deploy/demon-beauty.service..."
   service_tmp="$(mktemp)"
-  sed "s|@ROOT_DIR@|$ROOT_DIR|g" "$ROOT_DIR/deploy/demon-beauty.service" > "$service_tmp"
+  sed -e "s|@ROOT_DIR@|$ROOT_DIR|g" \
+      -e "s|@SERVICE_USER@|$service_user|g" \
+      -e "s|@SERVICE_GROUP@|$service_group|g" \
+      "$ROOT_DIR/deploy/demon-beauty.service" > "$service_tmp"
   sudo cp "$service_tmp" /etc/systemd/system/demon-beauty.service
   rm -f "$service_tmp"
   sudo systemctl daemon-reload

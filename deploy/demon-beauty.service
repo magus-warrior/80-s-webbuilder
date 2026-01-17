@@ -4,9 +4,16 @@ After=network.target
 
 [Service]
 Type=simple
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
 WorkingDirectory=@ROOT_DIR@
 ExecStart=@ROOT_DIR@/start.sh
 Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=@ROOT_DIR@
 
 [Install]
 WantedBy=multi-user.target
