@@ -1,5 +1,12 @@
-import type { CSSProperties, DragEvent, MouseEvent } from 'react';
-import { useEffect, useMemo, useRef } from 'react';
+import type {
+  CSSProperties,
+  DragEvent,
+  FocusEvent,
+  FormEvent,
+  HTMLAttributes,
+  MouseEvent
+} from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import interact from 'interactjs';
 
 import type { Node } from '../../models';
@@ -121,17 +128,36 @@ const renderChildren = (node: Node, interactive: boolean) =>
     <NodeRenderer key={child.id} node={child} interactive={interactive} />
   )) ?? null;
 
-const renderTextNode = (node: Node, _interactive: boolean, tokenMap: Record<string, string>) => (
-  <p style={resolveNodeStyles(node, tokenMap)} className="text-sm text-inherit">
+const renderTextNode = (
+  node: Node,
+  interactive: boolean,
+  tokenMap: Record<string, string>,
+  editableProps?: HTMLAttributes<HTMLParagraphElement>
+) => (
+  <p
+    style={resolveNodeStyles(node, tokenMap)}
+    className="text-sm text-inherit"
+    contentEditable={interactive}
+    suppressContentEditableWarning
+    {...editableProps}
+  >
     {node.props?.content ?? node.name}
   </p>
 );
 
-const renderButtonNode = (node: Node, _interactive: boolean, tokenMap: Record<string, string>) => (
+const renderButtonNode = (
+  node: Node,
+  interactive: boolean,
+  tokenMap: Record<string, string>,
+  editableProps?: HTMLAttributes<HTMLButtonElement>
+) => (
   <button
     type="button"
     style={resolveNodeStyles(node, tokenMap)}
     className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-inherit shadow-lg neon-glow-soft transition hover:brightness-110"
+    contentEditable={interactive}
+    suppressContentEditableWarning
+    {...editableProps}
   >
     {node.props?.label ?? node.name}
   </button>
@@ -181,7 +207,15 @@ const renderContainerNode = (
 };
 
 const nodeRenderers: Partial<
-  Record<Node['type'], (node: Node, interactive: boolean, tokenMap: Record<string, string>) => JSX.Element>
+  Record<
+    Node['type'],
+    (
+      node: Node,
+      interactive: boolean,
+      tokenMap: Record<string, string>,
+      editableProps?: HTMLAttributes<HTMLElement>
+    ) => JSX.Element
+  >
 > = {
   text: renderTextNode,
   button: renderButtonNode,
@@ -206,6 +240,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
   const addNodeToContainer = useEditorStore((state) => state.addNodeToContainer);
   const gridSize = useEditorStore((state) => state.gridSize);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const interactableRef = useRef<ReturnType<typeof interact> | null>(null);
   const { tokens } = useTheme();
   const x = parseLength(node.props?.x);
   const y = parseLength(node.props?.y);
@@ -215,6 +250,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
   const renderer = nodeRenderers[node.type];
   const tokenMap = useMemo(() => buildTokenVarMap(tokens), [tokens]);
   const isSelected = selectedNodeId === node.id;
+  const [isEditing, setIsEditing] = useState(false);
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
     if (!interactive) {
       return;
@@ -320,11 +356,70 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
           }
         }
       });
+    interactableRef.current = interactable;
 
     return () => {
       interactable.unset();
+      interactableRef.current = null;
     };
   }, [gridSize, interactive, node.id, updateNodeProps]);
+
+  useEffect(() => {
+    if (!interactive) {
+      return;
+    }
+    if (!interactableRef.current) {
+      return;
+    }
+    interactableRef.current.draggable({ enabled: !isEditing });
+    interactableRef.current.resizable({ enabled: !isEditing });
+  }, [interactive, isEditing]);
+
+  const handleEditableFocus = (event: FocusEvent<HTMLElement>) => {
+    if (!interactive) {
+      return;
+    }
+    event.stopPropagation();
+    setSelectedNodeId(node.id);
+    setIsEditing(true);
+  };
+
+  const handleEditableBlur = (key: 'content' | 'label') => (event: FocusEvent<HTMLElement>) => {
+    if (!interactive) {
+      return;
+    }
+    event.stopPropagation();
+    setIsEditing(false);
+    const nextValue = event.currentTarget.textContent ?? '';
+    updateNodeProps(node.id, { [key]: nextValue });
+  };
+
+  const handleEditableInput = (key: 'content' | 'label') => (event: FormEvent<HTMLElement>) => {
+    if (!interactive) {
+      return;
+    }
+    event.stopPropagation();
+    const nextValue = event.currentTarget.textContent ?? '';
+    updateNodeProps(node.id, { [key]: nextValue }, { history: 'debounced' });
+  };
+
+  const stopEditablePropagation = (event: MouseEvent<HTMLElement>) => {
+    if (!interactive) {
+      return;
+    }
+    event.stopPropagation();
+  };
+
+  const editableProps =
+    interactive && (node.type === 'text' || node.type === 'button')
+      ? {
+          onFocus: handleEditableFocus,
+          onBlur: handleEditableBlur(node.type === 'text' ? 'content' : 'label'),
+          onInput: handleEditableInput(node.type === 'text' ? 'content' : 'label'),
+          onMouseDown: stopEditablePropagation,
+          onClick: stopEditablePropagation
+        }
+      : undefined;
 
   if (renderer) {
     return (
@@ -342,7 +437,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
             : 'rounded-2xl'
         }
       >
-        {renderer(node, interactive, tokenMap)}
+        {renderer(node, interactive, tokenMap, editableProps)}
       </div>
     );
   }

@@ -702,6 +702,21 @@ export default function EditorLayout({
                         className="mt-2 block w-full text-xs text-slate-300 file:mr-3 file:rounded-full file:border-0 file:bg-neon-gradient file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-950 file:shadow-lg file:neon-glow-soft disabled:opacity-60"
                       />
                     </label>
+                    <label className="block">
+                      <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                        Alt text
+                      </span>
+                      <input
+                        value={selectedNode.props?.alt ?? ''}
+                        onChange={(event) =>
+                          updateNodeProps(selectedNode.id, {
+                            alt: event.target.value
+                          })
+                        }
+                        placeholder="Describe the image"
+                        className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                      />
+                    </label>
                     {assetError ? (
                       <p className="text-xs text-rose-300">Error: {assetError}</p>
                     ) : null}
