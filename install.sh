@@ -96,9 +96,14 @@ echo "Installing backend dependencies (requirements.txt) into virtualenv..."
 
 uvicorn_path="$("$python_cmd" -c "import shutil; print(shutil.which('uvicorn') or '')")"
 if [ -z "$uvicorn_path" ]; then
-  echo "Error: uvicorn is not available after dependency install." >&2
-  echo "Ensure it is listed in requirements.txt or install it with pip." >&2
-  exit 1
+  echo "uvicorn was not available after dependency install. Installing explicitly..." >&2
+  "$python_cmd" -m pip install uvicorn
+  uvicorn_path="$("$python_cmd" -c "import shutil; print(shutil.which('uvicorn') or '')")"
+  if [ -z "$uvicorn_path" ]; then
+    echo "Error: uvicorn is not available after dependency install." >&2
+    echo "Ensure it is listed in requirements.txt or install it with pip." >&2
+    exit 1
+  fi
 fi
 
 start_tmp="$(mktemp)"
@@ -132,6 +137,65 @@ else
   echo "Manual run selected. Next steps:"
   echo "- Start the app: $ROOT_DIR/start.sh"
   echo "- If you prefer systemd later, see README.md and deploy/demon-beauty.service"
+fi
+
+nginx_choice=$(prompt_choice "Configure Nginx reverse proxy + Certbot TLS? [y/N]: " "N")
+if [[ "${nginx_choice,,}" == "y" ]]; then
+  require_cmd sudo
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "Error: apt-get is required to install Nginx/Certbot automatically." >&2
+    exit 1
+  fi
+
+  domain_name=$(prompt_choice "Enter the domain name (e.g. example.com): " "")
+  if [ -z "$domain_name" ]; then
+    echo "Error: domain name is required to configure Nginx/Certbot." >&2
+    exit 1
+  fi
+
+  admin_email=$(prompt_choice "Enter the certbot email address: " "")
+  if [ -z "$admin_email" ]; then
+    echo "Error: certbot email is required." >&2
+    exit 1
+  fi
+
+  echo "Installing Nginx and Certbot..."
+  sudo apt-get update
+  sudo apt-get install -y nginx certbot python3-certbot-nginx
+
+  echo "Configuring Nginx for $domain_name..."
+  nginx_conf="/etc/nginx/sites-available/$domain_name"
+  sudo tee "$nginx_conf" >/dev/null <<EOF
+server {
+    listen 80;
+    server_name $domain_name;
+
+    location / {
+        proxy_pass http://127.0.0.1:5024;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+  sudo ln -sf "$nginx_conf" "/etc/nginx/sites-enabled/$domain_name"
+  if [ -f /etc/nginx/sites-enabled/default ]; then
+    sudo rm -f /etc/nginx/sites-enabled/default
+  fi
+
+  sudo nginx -t
+  sudo systemctl reload nginx
+
+  echo "Requesting TLS certificate with Certbot..."
+  sudo certbot --nginx -d "$domain_name" --non-interactive --agree-tos -m "$admin_email"
+
+  echo
+  echo "Nginx configured with TLS. Next steps:"
+  echo "- Verify renewals: sudo certbot renew --dry-run"
+  echo "- Nginx status:    sudo systemctl status nginx"
 fi
 
 echo
