@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import NodeRenderer from '../components/editor/NodeRenderer';
 import { ThemeProvider, useTheme } from '../components/editor/ThemeProvider';
@@ -38,6 +38,16 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
             {project?.description ??
               'This published layout is powered by your saved nodes and theme tokens.'}
           </p>
+          {project?.id ? (
+            <div className="mt-6">
+              <Link
+                to={`/projects/${project.id}`}
+                className="inline-flex items-center justify-center rounded-full border border-cyan-400/40 bg-cyan-500/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-100 transition hover:border-cyan-300/80 hover:bg-cyan-500/20"
+              >
+                Open Project
+              </Link>
+            </div>
+          ) : null}
           {publishedAt ? (
             <p className="mt-4 text-xs uppercase tracking-[0.25em] text-slate-400">
               Published {publishedAt}
