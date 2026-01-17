@@ -10,6 +10,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
+        <Route path="/:slug" element={<PublicSite />} />
         <Route path="/public/:slug" element={<PublicSite />} />
         <Route path="/public" element={<PublicSite />} />
         <Route path="/*" element={<App />} />

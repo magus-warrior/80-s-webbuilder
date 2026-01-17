@@ -23,6 +23,8 @@ const features = [
   }
 ];
 
+const reservedPublicSlugs = new Set(['projects', 'assets', 'auth', 'uploads', 'public']);
+
 export default function App() {
   const [project, setProject] = useState<Project | null>(null);
   const [projectError, setProjectError] = useState<string | null>(null);
@@ -222,8 +224,11 @@ export default function App() {
     }
   };
 
-  const publicLink = project?.publicSlug
-    ? `${window.location.origin}/public/${project.publicSlug}`
+  const publicSlug = project?.publicSlug;
+  const publicLink = publicSlug
+    ? reservedPublicSlugs.has(publicSlug)
+      ? `${window.location.origin}/public/${publicSlug}`
+      : `${window.location.origin}/${publicSlug}`
     : null;
 
   useEffect(() => {

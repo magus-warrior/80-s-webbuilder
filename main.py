@@ -22,6 +22,7 @@ DIST_DIR = ROOT_DIR / "dist"
 INDEX_FILE = DIST_DIR / "index.html"
 UPLOAD_DIR = ROOT_DIR / "public" / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+RESERVED_PUBLIC_SLUGS = {"projects", "assets", "auth", "uploads", "public"}
 
 app.include_router(auth_router)
 
@@ -231,6 +232,10 @@ def is_public_slug_available(slug: str, project: Project, db: Session) -> bool:
     return existing is None
 
 
+def is_reserved_public_slug(slug: str) -> bool:
+    return slug in RESERVED_PUBLIC_SLUGS
+
+
 def serialize_project(project: Project) -> dict[str, Any]:
     data = coerce_project_data(project)
     response = {
@@ -316,6 +321,15 @@ def get_public_project(slug: str, db: Session = Depends(get_db)) -> dict[str, An
 
 @app.get("/public/{path:path}", response_model=None)
 def public_site(path: str) -> FileResponse:
+    if INDEX_FILE.exists():
+        return FileResponse(INDEX_FILE)
+    raise HTTPException(status_code=404, detail="Public site not available")
+
+
+@app.get("/{slug}", response_model=None)
+def public_slug_site(slug: str) -> FileResponse:
+    if is_reserved_public_slug(slug):
+        raise HTTPException(status_code=404, detail="Public site not available")
     if INDEX_FILE.exists():
         return FileResponse(INDEX_FILE)
     raise HTTPException(status_code=404, detail="Public site not available")
