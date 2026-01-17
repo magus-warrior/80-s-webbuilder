@@ -6,6 +6,10 @@ import type { ThemeToken } from '../../models';
 type ThemeContextValue = {
   tokens: ThemeToken[];
   updateTokenValue: (name: string, value: string) => void;
+  applyTokens: (
+    nextTokens: ThemeToken[],
+    options?: { preserveExistingValues?: boolean }
+  ) => void;
   cssVariables: CSSProperties;
 };
 
@@ -37,8 +41,25 @@ export function ThemeProvider({ tokens, onTokensChange, children }: ThemeProvide
     );
   };
 
+  const applyTokens = (
+    nextTokens: ThemeToken[],
+    options?: { preserveExistingValues?: boolean }
+  ) => {
+    if (!options?.preserveExistingValues) {
+      onTokensChange(nextTokens);
+      return;
+    }
+    const existingValues = new Map(tokens.map((token) => [token.name, token.value]));
+    onTokensChange(
+      nextTokens.map((token) => ({
+        ...token,
+        value: existingValues.get(token.name) ?? token.value
+      }))
+    );
+  };
+
   return (
-    <ThemeContext.Provider value={{ tokens, updateTokenValue, cssVariables }}>
+    <ThemeContext.Provider value={{ tokens, updateTokenValue, applyTokens, cssVariables }}>
       {children}
     </ThemeContext.Provider>
   );
