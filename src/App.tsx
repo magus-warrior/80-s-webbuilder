@@ -59,6 +59,7 @@ export default function App() {
   const latestProject = useRef<Project | null>(null);
   const saveRequestId = useRef(0);
   const lastLoadedProjectId = useRef<string | null>(null);
+  const slugValidationTimeout = useRef<number | null>(null);
 
   const handleAuthFailure = (response: Response, onFail?: () => void) => {
     if (response.status === 401 || response.status === 403) {
@@ -421,7 +422,7 @@ export default function App() {
       setPublicSlugStatus(
         data.available
           ? { state: 'available', message: 'Slug is available.' }
-          : { state: 'unavailable', message: 'Slug is already taken.' }
+          : { state: 'unavailable', message: 'Slug is already taken. Choose another.' }
       );
     } catch (error) {
       setPublicSlugStatus({
@@ -430,6 +431,28 @@ export default function App() {
       });
     }
   };
+
+  useEffect(() => {
+    if (!authToken || !activeProjectId) {
+      return;
+    }
+    if (slugValidationTimeout.current) {
+      window.clearTimeout(slugValidationTimeout.current);
+    }
+    if (!publicSlugDraft.trim()) {
+      setPublicSlugStatus({ state: 'idle' });
+      return;
+    }
+    slugValidationTimeout.current = window.setTimeout(() => {
+      void validatePublicSlug(publicSlugDraft);
+    }, 450);
+
+    return () => {
+      if (slugValidationTimeout.current) {
+        window.clearTimeout(slugValidationTimeout.current);
+      }
+    };
+  }, [activeProjectId, authToken, publicSlugDraft]);
 
   const handleLogout = async () => {
     try {
@@ -538,6 +561,12 @@ export default function App() {
   if (!authToken) {
     return <AuthScreen />;
   }
+
+  const isPublishDisabled =
+    !project ||
+    isPublishing ||
+    publicSlugStatus.state === 'unavailable' ||
+    publicSlugStatus.state === 'error';
 
   return (
     <ThemeProvider tokens={themeTokens} onTokensChange={setThemeTokens}>
@@ -691,7 +720,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => handlePublishToggle(!project?.isPublished)}
-                disabled={!project || isPublishing}
+                disabled={isPublishDisabled}
                 className="rounded-full border-neon-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-200 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isPublishing
