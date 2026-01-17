@@ -11,6 +11,30 @@ require_cmd() {
   fi
 }
 
+ensure_python() {
+  if command -v python >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v apt-get >/dev/null 2>&1; then
+    local install_choice
+    install_choice=$(prompt_choice "Python not found. Install python3, venv, and pip via apt-get? [Y/n]: " "Y")
+    if [[ "${install_choice,,}" == "y" ]]; then
+      echo "Installing Python (apt-get)..."
+      sudo apt-get update
+      sudo apt-get install -y python3 python3-venv python3-pip
+      return 0
+    fi
+  fi
+
+  echo "Error: Python is required but was not found." >&2
+  exit 1
+}
+
 prompt_choice() {
   local prompt="$1"
   local default="$2"
@@ -21,17 +45,26 @@ prompt_choice() {
   printf '%s' "$reply"
 }
 
-require_cmd python
-
 cd "$ROOT_DIR"
 
+ensure_python
+
 python_cmd="python"
-if command -v uvicorn >/dev/null 2>&1; then
-  uvicorn_path_existing="$(command -v uvicorn)"
-  uvicorn_bin_dir="$(dirname "$uvicorn_path_existing")"
-  if [ -x "$uvicorn_bin_dir/python" ]; then
-    python_cmd="$uvicorn_bin_dir/python"
+if ! command -v python >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
+  python_cmd="python3"
+fi
+
+venv_dir="$ROOT_DIR/.venv"
+venv_choice=$(prompt_choice "Create/use virtualenv at $venv_dir? [Y/n]: " "Y")
+if [[ "${venv_choice,,}" == "y" ]]; then
+  if [ ! -d "$venv_dir" ]; then
+    echo "Creating virtualenv..."
+    "$python_cmd" -m venv "$venv_dir"
   fi
+  python_cmd="$venv_dir/bin/python"
+else
+  echo "Error: virtualenv is required for installation." >&2
+  exit 1
 fi
 
 if ! command -v psql >/dev/null 2>&1; then
@@ -57,7 +90,8 @@ sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
 sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='fastapi_app'" | grep -q 1 \
   || sudo -u postgres createdb -O postgres fastapi_app
 
-echo "Installing backend dependencies (requirements.txt)..."
+echo "Installing backend dependencies (requirements.txt) into virtualenv..."
+"$python_cmd" -m pip install --upgrade pip
 "$python_cmd" -m pip install -r requirements.txt
 
 uvicorn_path="$("$python_cmd" -c "import shutil; print(shutil.which('uvicorn') or '')")"
