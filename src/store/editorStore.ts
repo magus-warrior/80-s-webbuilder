@@ -19,6 +19,7 @@ type EditorState = {
     options?: { history?: HistoryMode }
   ) => void;
   updateNodeName: (nodeId: string, name: string) => void;
+  removeNode: (nodeId: string) => void;
   addNode: (node: Node) => void;
   addNodeToContainer: (containerId: string, node: Node) => void;
   moveNodeWithinParent: (parentId: string | null, sourceId: string, targetId: string) => void;
@@ -92,6 +93,35 @@ const addNodeToTree = (nodes: Node[], containerId: string, nodeToAdd: Node): Nod
   });
 
   return didInsert ? nextNodes : nodes;
+};
+
+const removeNodeFromTree = (nodes: Node[], nodeId: string): Node[] => {
+  let didRemove = false;
+  const nextNodes = nodes.flatMap((node) => {
+    if (node.id === nodeId) {
+      didRemove = true;
+      return [];
+    }
+
+    if (!node.children) {
+      return [node];
+    }
+
+    const nextChildren = removeNodeFromTree(node.children, nodeId);
+    if (nextChildren === node.children) {
+      return [node];
+    }
+
+    didRemove = true;
+    return [
+      {
+        ...node,
+        children: nextChildren
+      }
+    ];
+  });
+
+  return didRemove ? nextNodes : nodes;
 };
 
 const reorderNodes = (nodes: Node[], sourceId: string, targetId: string): Node[] => {
@@ -270,6 +300,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
           ...node,
           name
         }))
+      }));
+    },
+    removeNode: (nodeId) => {
+      const currentNodes = get().nodes;
+      const nextNodes = removeNodeFromTree(currentNodes, nodeId);
+      if (nextNodes === currentNodes) {
+        return;
+      }
+      pushSnapshot();
+      set((state) => ({
+        nodes: nextNodes,
+        selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId
       }));
     },
     addNode: (node) => {
