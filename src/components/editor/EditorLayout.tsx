@@ -175,6 +175,7 @@ export default function EditorLayout({
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
   const updateNodeName = useEditorStore((state) => state.updateNodeName);
+  const removeNode = useEditorStore((state) => state.removeNode);
   const addNode = useEditorStore((state) => state.addNode);
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const moveNodeWithinParent = useEditorStore((state) => state.moveNodeWithinParent);
@@ -316,6 +317,14 @@ export default function EditorLayout({
       if (isEditableTarget(event.target)) {
         return;
       }
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        if (!selectedNodeId) {
+          return;
+        }
+        event.preventDefault();
+        removeNode(selectedNodeId);
+        return;
+      }
       const isMac = navigator.platform.toLowerCase().includes('mac');
       const modifierPressed = isMac ? event.metaKey : event.ctrlKey;
       if (!modifierPressed) {
@@ -338,7 +347,7 @@ export default function EditorLayout({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [redo, undo]);
+  }, [redo, removeNode, selectedNodeId, undo]);
 
   return (
     <section className="rounded-3xl border-neon-soft bg-black/80 p-6 shadow-2xl neon-glow-soft">
@@ -564,6 +573,18 @@ export default function EditorLayout({
                         onFocus={() => setSelectedNodeId(item.node.id)}
                         className="flex-1 rounded-md border border-slate-800/80 bg-slate-950/70 px-2 py-1 text-xs text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
                       />
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removeNode(item.node.id);
+                        }}
+                        onKeyDown={(event) => event.stopPropagation()}
+                        className="rounded-full border border-transparent px-2 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-slate-500 transition hover:border-rose-400/60 hover:text-rose-200"
+                        aria-label={`Delete ${item.node.name}`}
+                      >
+                        ✕
+                      </button>
                     </div>
                   );
                 })
@@ -853,14 +874,24 @@ export default function EditorLayout({
               Select a node on the canvas to edit its text and styles.
             </div>
           )}
-          <button
-            className="mt-auto rounded-full border-neon-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-100 transition hover:brightness-110"
-            onClick={handleResetStyles}
-            type="button"
-            disabled={!selectedNodeId}
-          >
-            Reset styles
-          </button>
+          <div className="mt-auto flex flex-wrap items-center gap-2">
+            <button
+              className="rounded-full border-neon-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-100 transition hover:brightness-110"
+              onClick={handleResetStyles}
+              type="button"
+              disabled={!selectedNodeId}
+            >
+              Reset styles
+            </button>
+            <button
+              className="rounded-full border border-rose-500/60 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-100 transition hover:border-rose-300/80 hover:text-rose-50"
+              onClick={() => selectedNode && removeNode(selectedNode.id)}
+              type="button"
+              disabled={!selectedNodeId}
+            >
+              Delete
+            </button>
+          </div>
         </aside>
       </div>
     </section>
