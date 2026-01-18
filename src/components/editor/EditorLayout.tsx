@@ -190,6 +190,8 @@ export default function EditorLayout({
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
   const { tokens, updateTokenValue, applyTokens, cssVariables } = useTheme();
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [isThemeAdvanced, setIsThemeAdvanced] = useState(false);
   const [preserveThemeValues, setPreserveThemeValues] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
@@ -207,6 +209,13 @@ export default function EditorLayout({
     [nodes, selectedNodeId]
   );
   const layerItems = useMemo(() => buildLayerItems(nodes), [nodes]);
+  const gridTemplateColumns = useMemo(
+    () =>
+      `${isLeftSidebarOpen ? 'minmax(220px,0.8fr)' : 'minmax(0,0)'} minmax(0,2fr) ${
+        isRightSidebarOpen ? 'minmax(240px,0.9fr)' : 'minmax(0,0)'
+      }`,
+    [isLeftSidebarOpen, isRightSidebarOpen]
+  );
   const textKey = selectedNode?.type === 'button' ? 'label' : 'content';
   const textValue = selectedNode?.props?.[textKey] ?? '';
   const isLayoutNode = selectedNode?.type === 'container' || selectedNode?.type === 'section';
@@ -378,14 +387,41 @@ export default function EditorLayout({
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Drag, drop, and refine</h2>
         </div>
-        <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-300">
-          <span className="h-2 w-2 rounded-full bg-neon-gradient shadow-lg neon-glow-soft" />
-          Live Preview
+        <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-300">
+          <div className="flex items-center gap-3">
+            <span className="h-2 w-2 rounded-full bg-neon-gradient shadow-lg neon-glow-soft" />
+            Live Preview
+          </div>
+          <div className="flex items-center gap-2 text-[0.55rem] uppercase tracking-[0.2em] text-slate-400">
+            <button
+              type="button"
+              onClick={() => setIsLeftSidebarOpen((prev) => !prev)}
+              aria-pressed={isLeftSidebarOpen}
+              className="rounded-full border border-slate-700/80 px-3 py-1 transition hover:border-cyan-400/60 hover:text-slate-200"
+            >
+              {isLeftSidebarOpen ? 'Hide left' : 'Show left'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsRightSidebarOpen((prev) => !prev)}
+              aria-pressed={isRightSidebarOpen}
+              className="rounded-full border border-slate-700/80 px-3 py-1 transition hover:border-fuchsia-400/60 hover:text-slate-200"
+            >
+              {isRightSidebarOpen ? 'Hide right' : 'Show right'}
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="mt-6 grid min-h-0 gap-6 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,2fr)_minmax(240px,0.9fr)]">
-        <aside className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4">
+      <div
+        className="mt-6 grid min-h-0 gap-6 transition-[grid-template-columns] duration-300"
+        style={{ gridTemplateColumns }}
+      >
+        <aside
+          className={`flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4 transition-opacity duration-300 ${
+            isLeftSidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        >
           <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
@@ -545,7 +581,11 @@ export default function EditorLayout({
           </div>
         </div>
 
-        <aside className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4">
+        <aside
+          className={`flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4 transition-opacity duration-300 ${
+            isRightSidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        >
           <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
