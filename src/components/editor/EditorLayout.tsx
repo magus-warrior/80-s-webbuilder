@@ -384,8 +384,8 @@ export default function EditorLayout({
         </div>
       </header>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,2fr)_minmax(240px,0.9fr)]">
-        <aside className="flex h-full flex-col gap-4 rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4">
+      <div className="mt-6 grid min-h-0 gap-6 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,2fr)_minmax(240px,0.9fr)]">
+        <aside className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4">
           <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
@@ -482,7 +482,7 @@ export default function EditorLayout({
           </div>
         </aside>
 
-        <div className="flex h-full flex-col gap-4 rounded-2xl border-neon bg-black/80 p-5 shadow-lg neon-glow-soft">
+        <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl border-neon bg-black/80 p-5 shadow-lg neon-glow-soft">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-transparent bg-neon-gradient bg-clip-text">
               Canvas
@@ -545,7 +545,7 @@ export default function EditorLayout({
           </div>
         </div>
 
-        <aside className="flex h-full flex-col gap-4 rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4">
+        <aside className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4">
           <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
