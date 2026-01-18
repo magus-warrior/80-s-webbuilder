@@ -674,23 +674,25 @@ export default function EditorLayout({
                       {inspectorSections.text ? 'Collapse' : 'Expand'}
                     </span>
                   </button>
-                  {inspectorSections.text ? (
-                    <>
-                      <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-slate-500">
-                        Content
-                      </label>
-                      <input
-                        value={textValue}
-                        onChange={(event) =>
-                          updateNodeProps(selectedNode.id, {
-                            [textKey]: event.target.value
-                          })
-                        }
-                        className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                        placeholder="Edit text"
-                      />
-                    </>
-                  ) : null}
+                  <div
+                    className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
+                      inspectorSections.text ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-slate-500">
+                      Content
+                    </label>
+                    <input
+                      value={textValue}
+                      onChange={(event) =>
+                        updateNodeProps(selectedNode.id, {
+                          [textKey]: event.target.value
+                        })
+                      }
+                      className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                      placeholder="Edit text"
+                    />
+                  </div>
                 </div>
               )}
               <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
@@ -705,79 +707,83 @@ export default function EditorLayout({
                     {inspectorSections.style ? 'Collapse' : 'Expand'}
                   </span>
                 </button>
-                {inspectorSections.style ? (
-                  <>
-                    <div className="mt-3 flex items-center justify-between">
-                      <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                        Essential styles
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setIsStyleAdvanced((prev) => !prev)}
-                        className="rounded-full border border-slate-700/80 px-2 py-1 text-[0.55rem] uppercase tracking-[0.2em] text-slate-400 transition hover:border-cyan-400/60 hover:text-slate-200"
-                      >
-                        {isStyleAdvanced ? 'Hide advanced' : 'Advanced styles'}
-                      </button>
-                    </div>
-                    <div className="mt-3 space-y-3">
-                      {(isStyleAdvanced ? styleFields : minimalStyleFields).map((field) => (
-                        <div key={field.key} className="block">
-                          {colorFieldKeys.has(field.key) ? (
-                            <ColorControl
-                              label={field.label}
+                <div
+                  className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
+                    inspectorSections.style
+                      ? 'max-h-[700px] opacity-100'
+                      : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                      Essential styles
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsStyleAdvanced((prev) => !prev)}
+                      className="rounded-full border border-slate-700/80 px-2 py-1 text-[0.55rem] uppercase tracking-[0.2em] text-slate-400 transition hover:border-cyan-400/60 hover:text-slate-200"
+                    >
+                      {isStyleAdvanced ? 'Hide advanced' : 'Advanced styles'}
+                    </button>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {(isStyleAdvanced ? styleFields : minimalStyleFields).map((field) => (
+                      <div key={field.key} className="block">
+                        {colorFieldKeys.has(field.key) ? (
+                          <ColorControl
+                            label={field.label}
+                            value={selectedNode.props?.[field.key] ?? ''}
+                            onChange={(nextValue) =>
+                              updateNodeProps(selectedNode.id, {
+                                [field.key]: nextValue
+                              })
+                            }
+                          />
+                        ) : (
+                          <label className="block">
+                            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                              {field.label}
+                            </span>
+                            <input
                               value={selectedNode.props?.[field.key] ?? ''}
-                              onChange={(nextValue) =>
+                              onChange={(event) =>
                                 updateNodeProps(selectedNode.id, {
-                                  [field.key]: nextValue
+                                  [field.key]: event.target.value
                                 })
                               }
+                              placeholder={field.placeholder}
+                              className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
                             />
-                          ) : (
-                            <label className="block">
-                              <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                                {field.label}
-                              </span>
-                              <input
-                                value={selectedNode.props?.[field.key] ?? ''}
-                                onChange={(event) =>
-                                  updateNodeProps(selectedNode.id, {
-                                    [field.key]: event.target.value
-                                  })
-                                }
-                                placeholder={field.placeholder}
-                                className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                              />
-                            </label>
-                          )}
-                        </div>
-                      ))}
-                      {isStyleAdvanced
-                        ? styleSelectFields.map((field) => (
-                            <label key={field.key} className="block">
-                              <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                                {field.label}
-                              </span>
-                              <select
-                                value={selectedNode.props?.[field.key] ?? ''}
-                                onChange={(event) =>
-                                  updateNodeProps(selectedNode.id, {
-                                    [field.key]: event.target.value
-                                  })
-                                }
-                                className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                              >
-                                {field.options.map((option) => (
-                                  <option key={option.value || 'default'} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                          ))
-                        : null}
-                    </div>
-                  </>
-                ) : null}
+                          </label>
+                        )}
+                      </div>
+                    ))}
+                    {isStyleAdvanced
+                      ? styleSelectFields.map((field) => (
+                          <label key={field.key} className="block">
+                            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                              {field.label}
+                            </span>
+                            <select
+                              value={selectedNode.props?.[field.key] ?? ''}
+                              onChange={(event) =>
+                                updateNodeProps(selectedNode.id, {
+                                  [field.key]: event.target.value
+                                })
+                              }
+                              className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                            >
+                              {field.options.map((option) => (
+                                <option key={option.value || 'default'} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))
+                      : null}
+                  </div>
+                </div>
               </div>
               <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
                 <button
@@ -791,7 +797,13 @@ export default function EditorLayout({
                     {inspectorSections.layout ? 'Collapse' : 'Expand'}
                   </span>
                 </button>
-                {inspectorSections.layout ? (
+                <div
+                  className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
+                    inspectorSections.layout
+                      ? 'max-h-[500px] opacity-100'
+                      : 'max-h-0 opacity-0'
+                  }`}
+                >
                   <div className="mt-3 space-y-3">
                     {layoutFields.map((field) => (
                       <label key={field.key} className="block">
@@ -849,7 +861,7 @@ export default function EditorLayout({
                         ))
                       : null}
                   </div>
-                ) : null}
+                </div>
               </div>
               {selectedNode.type === 'image' && (
                 <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
@@ -864,7 +876,13 @@ export default function EditorLayout({
                       {inspectorSections.assets ? 'Collapse' : 'Expand'}
                     </span>
                   </button>
-                  {inspectorSections.assets ? (
+                  <div
+                    className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
+                      inspectorSections.assets
+                        ? 'max-h-[600px] opacity-100'
+                        : 'max-h-0 opacity-0'
+                    }`}
+                  >
                     <div className="mt-3 space-y-3">
                       <label className="block">
                         <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
@@ -933,7 +951,7 @@ export default function EditorLayout({
                         </div>
                       )}
                     </div>
-                  ) : null}
+                  </div>
                 </div>
               )}
               <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
@@ -948,103 +966,103 @@ export default function EditorLayout({
                     {inspectorSections.theme ? 'Collapse' : 'Expand'}
                   </span>
                 </button>
-                {inspectorSections.theme ? (
-                  <>
-                    <div className="mt-3 flex items-center justify-between">
-                      <p className="text-xs text-slate-500">
-                        Apply a preset or fine-tune the tokens below.
-                      </p>
+                <div
+                  className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
+                    inspectorSections.theme
+                      ? 'max-h-[900px] opacity-100'
+                      : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-xs text-slate-500">
+                      Apply a preset or fine-tune the tokens below.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsThemeAdvanced((prev) => !prev)}
+                      className="rounded-full border border-slate-700/80 px-2 py-1 text-[0.55rem] uppercase tracking-[0.2em] text-slate-400 transition hover:border-cyan-400/60 hover:text-slate-200"
+                    >
+                      {isThemeAdvanced ? 'Hide advanced' : 'Advanced styles'}
+                    </button>
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    {themePresets.map((preset) => (
                       <button
+                        key={preset.id}
                         type="button"
-                        onClick={() => setIsThemeAdvanced((prev) => !prev)}
-                        className="rounded-full border border-slate-700/80 px-2 py-1 text-[0.55rem] uppercase tracking-[0.2em] text-slate-400 transition hover:border-cyan-400/60 hover:text-slate-200"
+                        onClick={() => handleApplyPreset(preset.id)}
+                        className={`flex flex-col rounded-lg border px-3 py-2 text-left text-xs transition ${
+                          activePresetId === preset.id
+                            ? 'border-fuchsia-300/70 bg-fuchsia-500/10 text-fuchsia-100'
+                            : 'border-slate-900/80 bg-black/60 text-slate-300 hover:border-fuchsia-400/60'
+                        }`}
                       >
-                        {isThemeAdvanced ? 'Hide advanced' : 'Advanced styles'}
+                        <span className="text-sm font-semibold text-slate-100">
+                          {preset.name}
+                        </span>
+                        <span className="mt-1 text-[0.65rem] text-slate-500">
+                          {preset.description}
+                        </span>
                       </button>
-                    </div>
-                    <div className="mt-3 grid gap-2">
-                      {themePresets.map((preset) => (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => handleApplyPreset(preset.id)}
-                          className={`flex flex-col rounded-lg border px-3 py-2 text-left text-xs transition ${
-                            activePresetId === preset.id
-                              ? 'border-fuchsia-300/70 bg-fuchsia-500/10 text-fuchsia-100'
-                              : 'border-slate-900/80 bg-black/60 text-slate-300 hover:border-fuchsia-400/60'
-                          }`}
-                        >
-                          <span className="text-sm font-semibold text-slate-100">
-                            {preset.name}
-                          </span>
-                          <span className="mt-1 text-[0.65rem] text-slate-500">
-                            {preset.description}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                    <label className="mt-3 flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                      <input
-                        type="checkbox"
-                        checked={preserveThemeValues}
-                        onChange={(event) => setPreserveThemeValues(event.target.checked)}
-                        className="h-4 w-4 rounded border border-slate-600 bg-slate-950/80 text-cyan-400 focus:neon-ring"
-                      />
-                      Preserve custom values
-                    </label>
-                    <div className="mt-3 space-y-3">
-                      {isThemeAdvanced ? (
-                        tokens.length > 0 ? (
-                          tokens.map((token) => (
-                            <div key={token.name} className="block">
-                              {token.category === 'color' ? (
-                                <ColorControl
-                                  label={token.name}
+                    ))}
+                  </div>
+                  <label className="mt-3 flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={preserveThemeValues}
+                      onChange={(event) => setPreserveThemeValues(event.target.checked)}
+                      className="h-4 w-4 rounded border border-slate-600 bg-slate-950/80 text-cyan-400 focus:neon-ring"
+                    />
+                    Preserve custom values
+                  </label>
+                  <div className="mt-3 space-y-3">
+                    {isThemeAdvanced ? (
+                      tokens.length > 0 ? (
+                        tokens.map((token) => (
+                          <div key={token.name} className="block">
+                            {token.category === 'color' ? (
+                              <ColorControl
+                                label={token.name}
+                                value={token.value}
+                                onChange={(nextValue) =>
+                                  updateTokenValue(token.name, nextValue)
+                                }
+                                description={token.description}
+                              />
+                            ) : (
+                              <label className="block">
+                                <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                                  {token.name}
+                                </span>
+                                <input
                                   value={token.value}
-                                  onChange={(nextValue) =>
-                                    updateTokenValue(token.name, nextValue)
+                                  onChange={(event) =>
+                                    updateTokenValue(token.name, event.target.value)
                                   }
-                                  description={token.description}
+                                  className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                                  placeholder={token.description ?? 'Theme token value'}
                                 />
-                              ) : (
-                                <label className="block">
-                                  <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                                    {token.name}
+                                {token.description ? (
+                                  <span className="mt-2 block text-[0.65rem] text-slate-500">
+                                    {token.description}
                                   </span>
-                                  <input
-                                    value={token.value}
-                                    onChange={(event) =>
-                                      updateTokenValue(token.name, event.target.value)
-                                    }
-                                    className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                                    placeholder={token.description ?? 'Theme token value'}
-                                  />
-                                  {token.description ? (
-                                    <span className="mt-2 block text-[0.65rem] text-slate-500">
-                                      {token.description}
-                                    </span>
-                                  ) : null}
-                                </label>
-                              )}
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-xs text-slate-500">
-                            No theme tokens loaded yet.
-                          </p>
-                        )
+                                ) : null}
+                              </label>
+                            )}
+                          </div>
+                        ))
                       ) : (
                         <p className="text-xs text-slate-500">
-                          Advanced tokens are hidden. Toggle to edit individual values.
+                          No theme tokens loaded yet.
                         </p>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <p className="mt-3 text-xs text-slate-500">
-                    Theme settings are global. Expand to adjust presets and tokens.
-                  </p>
-                )}
+                      )
+                    ) : (
+                      <p className="text-xs text-slate-500">
+                        Advanced tokens are hidden. Toggle to edit individual values.
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
