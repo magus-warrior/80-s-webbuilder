@@ -262,9 +262,23 @@ export default function App() {
         }
         const projects = (await response.json()) as ProjectSummary[];
         if (projects.length === 0) {
-          const seedResponse = await fetch('/sample-project.json');
+          const seedUrl = new URL(
+            `${import.meta.env.BASE_URL}sample-project.json`,
+            window.location.origin
+          );
+          const seedResponse = await fetch(seedUrl.toString());
           if (!seedResponse.ok) {
             throw new Error(`Seed request failed: ${seedResponse.status}`);
+          }
+          const seedContentType = seedResponse.headers.get('content-type');
+          if (!seedContentType?.includes('application/json')) {
+            const seedBody = await seedResponse.text();
+            throw new Error(
+              `Seed data invalid: ${seedContentType ?? 'unknown content type'} (${seedBody.slice(
+                0,
+                80
+              )})`
+            );
           }
           const seedData = (await seedResponse.json()) as Project;
           const createdResponse = await fetch('/projects', {
