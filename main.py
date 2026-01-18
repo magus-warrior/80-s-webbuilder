@@ -19,6 +19,7 @@ from routers.auth import router as auth_router
 app = FastAPI()
 ROOT_DIR = Path(__file__).resolve().parent
 DIST_DIR = ROOT_DIR / "dist"
+PUBLIC_DIR = ROOT_DIR / "public"
 INDEX_FILE = DIST_DIR / "index.html"
 UPLOAD_DIR = ROOT_DIR / "public" / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -317,6 +318,17 @@ def get_public_project(slug: str, db: Session = Depends(get_db)) -> dict[str, An
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return serialize_project(project)
+
+
+@app.get("/sample-project.json", response_model=None)
+def get_sample_project() -> FileResponse:
+    dist_sample = DIST_DIR / "sample-project.json"
+    public_sample = PUBLIC_DIR / "sample-project.json"
+    if dist_sample.exists():
+        return FileResponse(dist_sample, media_type="application/json")
+    if public_sample.exists():
+        return FileResponse(public_sample, media_type="application/json")
+    raise HTTPException(status_code=404, detail="Sample project not available")
 
 
 @app.get("/public/{path:path}", response_model=None)
