@@ -339,7 +339,12 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
         }
       })
       .resizable({
-        edges: { left: true, right: true, bottom: true, top: true },
+        edges: {
+          left: '.resize-handle-left',
+          right: '.resize-handle-right',
+          bottom: '.resize-handle-bottom',
+          top: '.resize-handle-top'
+        },
         modifiers: snapModifiers,
         listeners: {
           move(event) {
@@ -421,6 +426,20 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
         }
       : undefined;
 
+  const resizeHandles =
+    interactive && isSelected ? (
+      <div className="pointer-events-none absolute inset-0">
+        <div className="resize-handle resize-handle-top resize-handle-left pointer-events-auto absolute left-0 top-0 h-2 w-2 -translate-x-1 -translate-y-1 border-2 border-slate-100 bg-slate-900/90" />
+        <div className="resize-handle resize-handle-top resize-handle-right pointer-events-auto absolute right-0 top-0 h-2 w-2 translate-x-1 -translate-y-1 border-2 border-slate-100 bg-slate-900/90" />
+        <div className="resize-handle resize-handle-bottom resize-handle-left pointer-events-auto absolute bottom-0 left-0 h-2 w-2 -translate-x-1 translate-y-1 border-2 border-slate-100 bg-slate-900/90" />
+        <div className="resize-handle resize-handle-bottom resize-handle-right pointer-events-auto absolute bottom-0 right-0 h-2 w-2 translate-x-1 translate-y-1 border-2 border-slate-100 bg-slate-900/90" />
+        <div className="resize-handle resize-handle-top pointer-events-auto absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1 border-2 border-slate-100 bg-slate-900/90" />
+        <div className="resize-handle resize-handle-bottom pointer-events-auto absolute bottom-0 left-1/2 h-2 w-2 -translate-x-1/2 translate-y-1 border-2 border-slate-100 bg-slate-900/90" />
+        <div className="resize-handle resize-handle-left pointer-events-auto absolute left-0 top-1/2 h-2 w-2 -translate-x-1 -translate-y-1/2 border-2 border-slate-100 bg-slate-900/90" />
+        <div className="resize-handle resize-handle-right pointer-events-auto absolute right-0 top-1/2 h-2 w-2 translate-x-1 -translate-y-1/2 border-2 border-slate-100 bg-slate-900/90" />
+      </div>
+    ) : null;
+
   if (renderer) {
     return (
       <div
@@ -431,13 +450,14 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
         style={positionStyle}
         className={
           interactive
-            ? `cursor-pointer rounded-2xl transition-shadow ${
+            ? `relative cursor-pointer rounded-2xl transition-shadow ${
                 isSelected ? 'neon-ring' : 'neon-ring-hover'
               }`
-            : 'rounded-2xl'
+            : 'relative rounded-2xl'
         }
       >
         {renderer(node, interactive, tokenMap, editableProps)}
+        {resizeHandles}
       </div>
     );
   }
@@ -448,16 +468,17 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
       ref={wrapperRef}
       className={
         interactive
-          ? `cursor-pointer rounded-2xl border border-slate-900/80 bg-black/40 p-4 transition-shadow ${
+          ? `relative cursor-pointer rounded-2xl border border-slate-900/80 bg-black/40 p-4 transition-shadow ${
               isSelected ? 'neon-ring' : 'neon-ring-hover'
             }`
-          : 'rounded-2xl border border-slate-900/80 bg-black/40 p-4'
+          : 'relative rounded-2xl border border-slate-900/80 bg-black/40 p-4'
       }
       style={{ ...resolveNodeStyles(node, tokenMap), ...positionStyle }}
     >
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{node.type}</div>
       <p className="mt-2 text-sm text-slate-200">{node.name}</p>
       {renderChildren(node, interactive)}
+      {resizeHandles}
     </div>
   );
 }
