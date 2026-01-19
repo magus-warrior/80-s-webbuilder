@@ -162,7 +162,26 @@ export default function App() {
         ) {
           setThemeTokens(savedProject.themeTokens ?? []);
         }
-        setProject(savedProject);
+        const currentNodes = useEditorStore.getState().nodes;
+        const currentPageId = useEditorStore.getState().currentPageId;
+        const resolvedSavedPageId =
+          currentPageId ?? savedProject.pages[0]?.id ?? null;
+        const savedPage =
+          savedProject.pages.find((page) => page.id === resolvedSavedPageId) ??
+          savedProject.pages[0];
+        const savedNodes = savedPage?.nodes ?? [];
+        const shouldPreserveNodes =
+          currentNodes.length > 0 &&
+          JSON.stringify(savedNodes) !== JSON.stringify(currentNodes);
+        const mergedProject = shouldPreserveNodes
+          ? buildUpdatedProject(
+              savedProject,
+              currentNodes,
+              themeTokens,
+              resolvedSavedPageId
+            )
+          : savedProject;
+        setProject(mergedProject);
       }
     } catch (error) {
       setProjectError(error instanceof Error ? error.message : 'Unknown error');
