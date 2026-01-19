@@ -160,8 +160,12 @@ interface EditorLayoutProps {
   onUploadAsset: (file: File) => Promise<Asset | null>;
   onSelectProject: (projectId: string) => void;
   onSelectPage: (pageId: string) => void;
-  onCreateProject: () => void;
-  onRenameProject: (projectId: string) => void;
+  onCreateProject: (name: string) => Promise<boolean>;
+  onRenameProject: (projectId: string, name: string) => Promise<boolean>;
+  onValidateProjectName: (
+    name: string,
+    projectId?: string | null
+  ) => Promise<{ name: string; slug: string; available: boolean } | null>;
   onDeleteProject: (projectId: string) => void;
   onAddPage: () => void;
   onRenamePage: (pageId: string) => void;
@@ -183,6 +187,7 @@ export default function EditorLayout({
   onSelectPage,
   onCreateProject,
   onRenameProject,
+  onValidateProjectName,
   onDeleteProject,
   onAddPage,
   onRenamePage,
@@ -208,6 +213,14 @@ export default function EditorLayout({
   const [preserveThemeValues, setPreserveThemeValues] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [isStyleAdvanced, setIsStyleAdvanced] = useState(false);
+  const [projectFormMode, setProjectFormMode] = useState<'create' | 'rename' | null>(
+    null
+  );
+  const [projectNameDraft, setProjectNameDraft] = useState('');
+  const [projectNameStatus, setProjectNameStatus] = useState<{
+    state: 'idle' | 'checking' | 'available' | 'unavailable' | 'error';
+    message?: string;
+  }>({ state: 'idle' });
   const [inspectorSections, setInspectorSections] = useState({
     text: true,
     style: true,
@@ -216,6 +229,9 @@ export default function EditorLayout({
     theme: false
   });
   const canvasBoundaryRef = useRef<HTMLDivElement | null>(null);
+  const projectNameTimeout = useRef<number | null>(null);
+  const projectValidationRequest = useRef(0);
+  const projectNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedNode = useMemo(
     () => findNodeById(nodes, selectedNodeId),
@@ -238,6 +254,12 @@ export default function EditorLayout({
     }
     return 'gap-0';
   }, [isLeftSidebarOpen, isRightSidebarOpen]);
+  const activeProjectName = useMemo(() => {
+    if (!activeProjectId) {
+      return '';
+    }
+    return projects.find((project) => project.id === activeProjectId)?.name ?? '';
+  }, [activeProjectId, projects]);
   const textKey = selectedNode?.type === 'button' ? 'label' : 'content';
   const textValue = selectedNode?.props?.[textKey] ?? '';
   const isLayoutNode = selectedNode?.type === 'container' || selectedNode?.type === 'section';
@@ -349,6 +371,95 @@ export default function EditorLayout({
     applyTokens(preset.tokens, { preserveExistingValues: preserveThemeValues });
     setActivePresetId(presetId);
   };
+  const resetProjectForm = () => {
+    setProjectFormMode(null);
+    setProjectNameDraft('');
+    setProjectNameStatus({ state: 'idle' });
+  };
+  const handleOpenProjectForm = (mode: 'create' | 'rename') => {
+    if (mode === 'rename' && !activeProjectId) {
+      return;
+    }
+    setProjectFormMode(mode);
+    setProjectNameDraft(mode === 'rename' ? activeProjectName : '');
+    setProjectNameStatus({ state: 'idle' });
+  };
+  const handleProjectSubmit = async () => {
+    const trimmed = projectNameDraft.trim();
+    if (!trimmed || projectNameStatus.state === 'unavailable') {
+      return;
+    }
+    if (projectFormMode === 'create') {
+      const success = await onCreateProject(trimmed);
+      if (success) {
+        resetProjectForm();
+      }
+    }
+    if (projectFormMode === 'rename' && activeProjectId) {
+      const success = await onRenameProject(activeProjectId, trimmed);
+      if (success) {
+        resetProjectForm();
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!projectFormMode) {
+      return;
+    }
+    projectNameInputRef.current?.focus();
+  }, [projectFormMode]);
+
+  useEffect(() => {
+    if (!projectFormMode) {
+      return;
+    }
+    if (projectNameTimeout.current) {
+      window.clearTimeout(projectNameTimeout.current);
+    }
+    const trimmed = projectNameDraft.trim();
+    if (!trimmed) {
+      setProjectNameStatus({ state: 'idle' });
+      return;
+    }
+    setProjectNameStatus({ state: 'checking' });
+    projectNameTimeout.current = window.setTimeout(() => {
+      const requestId = ++projectValidationRequest.current;
+      void (async () => {
+        const response = await onValidateProjectName(
+          trimmed,
+          projectFormMode === 'rename' ? activeProjectId : null
+        );
+        if (requestId !== projectValidationRequest.current) {
+          return;
+        }
+        if (!response) {
+          setProjectNameStatus({
+            state: 'error',
+            message: 'Unable to validate name.'
+          });
+          return;
+        }
+        setProjectNameStatus(
+          response.available
+            ? { state: 'available', message: 'Name is available.' }
+            : { state: 'unavailable', message: 'Name is already taken.' }
+        );
+      })();
+    }, 400);
+
+    return () => {
+      if (projectNameTimeout.current) {
+        window.clearTimeout(projectNameTimeout.current);
+      }
+    };
+  }, [activeProjectId, onValidateProjectName, projectFormMode, projectNameDraft]);
+
+  useEffect(() => {
+    if (projectFormMode === 'rename' && !activeProjectId) {
+      resetProjectForm();
+    }
+  }, [activeProjectId, projectFormMode]);
 
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null) => {
@@ -458,14 +569,14 @@ export default function EditorLayout({
             <div className="mt-3 flex flex-wrap gap-2 text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
               <button
                 type="button"
-                onClick={onCreateProject}
+                onClick={() => handleOpenProjectForm('create')}
                 className="rounded-full border border-slate-700/80 px-3 py-1 transition hover:border-cyan-400/60 hover:text-slate-200"
               >
                 Create
               </button>
               <button
                 type="button"
-                onClick={() => activeProjectId && onRenameProject(activeProjectId)}
+                onClick={() => handleOpenProjectForm('rename')}
                 disabled={!activeProjectId}
                 className="rounded-full border border-slate-700/80 px-3 py-1 transition hover:border-cyan-400/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -480,6 +591,66 @@ export default function EditorLayout({
                 Delete
               </button>
             </div>
+            {projectFormMode ? (
+              <form
+                className="mt-3 space-y-3 rounded-lg border border-slate-900/80 bg-black/70 p-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleProjectSubmit();
+                }}
+              >
+                <label className="block text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
+                  Project name
+                  <input
+                    ref={projectNameInputRef}
+                    type="text"
+                    value={projectNameDraft}
+                    onChange={(event) => {
+                      setProjectNameDraft(event.target.value);
+                      setProjectNameStatus({ state: 'idle' });
+                    }}
+                    placeholder="New project name"
+                    className="mt-2 w-full rounded-lg border border-slate-800/80 bg-black/60 px-3 py-2 text-xs normal-case text-slate-100 focus:border-cyan-200 focus:outline-none"
+                  />
+                </label>
+                {projectNameStatus.state !== 'idle' ? (
+                  <p
+                    className={`text-[0.6rem] ${
+                      projectNameStatus.state === 'available'
+                        ? 'text-cyan-200'
+                        : projectNameStatus.state === 'checking'
+                          ? 'text-slate-400'
+                          : 'text-rose-300'
+                    }`}
+                  >
+                    {projectNameStatus.state === 'checking'
+                      ? 'Checking availability...'
+                      : projectNameStatus.message}
+                  </p>
+                ) : null}
+                <div className="flex flex-wrap gap-2 text-[0.6rem] uppercase tracking-[0.2em]">
+                  <button
+                    type="submit"
+                    disabled={
+                      !projectNameDraft.trim() ||
+                      projectNameStatus.state === 'unavailable' ||
+                      projectNameStatus.state === 'error' ||
+                      projectNameStatus.state === 'checking'
+                    }
+                    className="rounded-full border border-cyan-400/60 px-3 py-1 text-cyan-200 transition hover:border-cyan-200 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {projectFormMode === 'create' ? 'Create project' : 'Rename project'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetProjectForm}
+                    className="rounded-full border border-slate-700/80 px-3 py-1 text-slate-300 transition hover:border-slate-400 hover:text-slate-100"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : null}
             <div className="mt-3 space-y-2">
               {isLoadingProjects ? (
                 <p className="text-xs text-slate-400">Loading projects...</p>
