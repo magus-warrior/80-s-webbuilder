@@ -435,6 +435,18 @@ export default function App() {
           throw new Error(`Project request failed: ${response.status}`);
         }
         const data = (await response.json()) as Project;
+        const localProject = latestProject.current;
+        if (localProject?.id === data.id) {
+          const localUpdatedAt = Date.parse(localProject.updatedAt ?? '');
+          const remoteUpdatedAt = Date.parse(data.updatedAt ?? '');
+          if (
+            Number.isFinite(localUpdatedAt) &&
+            Number.isFinite(remoteUpdatedAt) &&
+            localUpdatedAt > remoteUpdatedAt
+          ) {
+            return;
+          }
+        }
         setProject(data);
         setPublicSlugDraft(data.publicSlug ?? '');
         setPublicSlugStatus({ state: 'idle' });
