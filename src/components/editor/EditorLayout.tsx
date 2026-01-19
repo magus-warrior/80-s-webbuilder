@@ -217,6 +217,15 @@ export default function EditorLayout({
       }`,
     [isLeftSidebarOpen, isRightSidebarOpen]
   );
+  const gridGapClass = useMemo(() => {
+    if (isLeftSidebarOpen && isRightSidebarOpen) {
+      return 'gap-6';
+    }
+    if (isLeftSidebarOpen || isRightSidebarOpen) {
+      return 'gap-3';
+    }
+    return 'gap-0';
+  }, [isLeftSidebarOpen, isRightSidebarOpen]);
   const textKey = selectedNode?.type === 'button' ? 'label' : 'content';
   const textValue = selectedNode?.props?.[textKey] ?? '';
   const isLayoutNode = selectedNode?.type === 'container' || selectedNode?.type === 'section';
@@ -415,12 +424,14 @@ export default function EditorLayout({
       </header>
 
       <div
-        className="mt-6 grid min-h-0 gap-6 transition-[grid-template-columns] duration-300"
+        className={`mt-6 grid min-h-0 transition-[grid-template-columns] duration-300 ${gridGapClass}`}
         style={{ gridTemplateColumns }}
       >
         <aside
-          className={`flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4 transition-opacity duration-300 ${
-            isLeftSidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+          className={`flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-hidden rounded-2xl border border-slate-900/80 bg-slate-950/70 transition-[width,opacity] duration-300 ${
+            isLeftSidebarOpen
+              ? 'w-full overflow-y-auto p-4 opacity-100'
+              : 'w-0 border-transparent p-0 opacity-0 pointer-events-none'
           }`}
         >
           <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
@@ -585,8 +596,10 @@ export default function EditorLayout({
         </div>
 
         <aside
-          className={`flex h-full min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl border border-slate-900/80 bg-slate-950/70 p-4 transition-opacity duration-300 ${
-            isRightSidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+          className={`flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-hidden rounded-2xl border border-slate-900/80 bg-slate-950/70 transition-[width,opacity] duration-300 ${
+            isRightSidebarOpen
+              ? 'w-full overflow-y-auto p-4 opacity-100'
+              : 'w-0 border-transparent p-0 opacity-0 pointer-events-none'
           }`}
         >
           <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
