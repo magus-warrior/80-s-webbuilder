@@ -160,6 +160,12 @@ interface EditorLayoutProps {
   onUploadAsset: (file: File) => Promise<Asset | null>;
   onSelectProject: (projectId: string) => void;
   onSelectPage: (pageId: string) => void;
+  onCreateProject: () => void;
+  onRenameProject: (projectId: string) => void;
+  onDeleteProject: (projectId: string) => void;
+  onAddPage: () => void;
+  onRenamePage: (pageId: string) => void;
+  onDeletePage: (pageId: string) => void;
   isLoadingProjects?: boolean;
 }
 
@@ -175,6 +181,12 @@ export default function EditorLayout({
   onUploadAsset,
   onSelectProject,
   onSelectPage,
+  onCreateProject,
+  onRenameProject,
+  onDeleteProject,
+  onAddPage,
+  onRenamePage,
+  onDeletePage,
   isLoadingProjects = false
 }: EditorLayoutProps) {
   const nodes = useEditorStore((state) => state.nodes);
@@ -443,6 +455,31 @@ export default function EditorLayout({
                 {projects.length}
               </span>
             </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
+              <button
+                type="button"
+                onClick={onCreateProject}
+                className="rounded-full border border-slate-700/80 px-3 py-1 transition hover:border-cyan-400/60 hover:text-slate-200"
+              >
+                Create
+              </button>
+              <button
+                type="button"
+                onClick={() => activeProjectId && onRenameProject(activeProjectId)}
+                disabled={!activeProjectId}
+                className="rounded-full border border-slate-700/80 px-3 py-1 transition hover:border-cyan-400/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Rename
+              </button>
+              <button
+                type="button"
+                onClick={() => activeProjectId && onDeleteProject(activeProjectId)}
+                disabled={!activeProjectId}
+                className="rounded-full border border-rose-500/60 px-3 py-1 text-rose-200 transition hover:border-rose-300/80 hover:text-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Delete
+              </button>
+            </div>
             <div className="mt-3 space-y-2">
               {isLoadingProjects ? (
                 <p className="text-xs text-slate-400">Loading projects...</p>
@@ -479,6 +516,31 @@ export default function EditorLayout({
               <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
                 {pages.length}
               </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
+              <button
+                type="button"
+                onClick={onAddPage}
+                className="rounded-full border border-slate-700/80 px-3 py-1 transition hover:border-fuchsia-400/60 hover:text-slate-200"
+              >
+                Add page
+              </button>
+              <button
+                type="button"
+                onClick={() => activePageId && onRenamePage(activePageId)}
+                disabled={!activePageId}
+                className="rounded-full border border-slate-700/80 px-3 py-1 transition hover:border-fuchsia-400/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Rename
+              </button>
+              <button
+                type="button"
+                onClick={() => activePageId && onDeletePage(activePageId)}
+                disabled={!activePageId}
+                className="rounded-full border border-rose-500/60 px-3 py-1 text-rose-200 transition hover:border-rose-300/80 hover:text-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Delete
+              </button>
             </div>
             <div className="mt-3 space-y-2">
               {pages.length === 0 ? (

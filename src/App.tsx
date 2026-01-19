@@ -75,11 +75,18 @@ export default function App() {
     return match?.[1] ?? null;
   };
 
-  const updateProjectRoute = (projectId: string) => {
-    const nextPath = `/projects/${projectId}`;
+  const updateProjectRoute = (projectId: string | null) => {
+    const nextPath = projectId ? `/projects/${projectId}` : '/';
     if (window.location.pathname !== nextPath) {
       window.history.replaceState(null, '', nextPath);
     }
+  };
+
+  const generateId = (prefix: string) => {
+    if (crypto?.randomUUID) {
+      return `${prefix}-${crypto.randomUUID()}`;
+    }
+    return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   };
 
   const buildUpdatedProject = (
@@ -161,6 +168,54 @@ export default function App() {
       setProjectError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const applyProjectUpdate = (updatedProject: Project) => {
+    setProject(updatedProject);
+    setProjectList((prev) =>
+      prev.map((item) =>
+        item.id === updatedProject.id
+          ? {
+              ...item,
+              name: updatedProject.name,
+              updatedAt: updatedProject.updatedAt
+            }
+          : item
+      )
+    );
+  };
+
+  const requestProjectUpdate = async (payload: Record<string, unknown>) => {
+    if (!activeProjectId) {
+      return null;
+    }
+    setProjectError(null);
+    try {
+      const response = await fetch(`/projects/${activeProjectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      if (
+        handleAuthFailure(response, () =>
+          setProjectError('Session expired. Please sign in again.')
+        )
+      ) {
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error(`Update failed: ${response.status}`);
+      }
+      const updatedProject = (await response.json()) as Project;
+      applyProjectUpdate(updatedProject);
+      return updatedProject;
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : 'Unknown error');
+      return null;
     }
   };
 
@@ -476,6 +531,7 @@ export default function App() {
       setProject(null);
       setProjectList([]);
       setActiveProjectId(null);
+      updateProjectRoute(null);
       setAssets([]);
       setAssetError(null);
     }
@@ -572,6 +628,251 @@ export default function App() {
     };
   }, [editorNodes, resolvedPageId, themeTokens]);
 
+  const handleCreateProject = async () => {
+    if (!authToken) {
+      return;
+    }
+    const nameInput = window.prompt('Project name', 'Untitled Project');
+    if (nameInput === null) {
+      return;
+    }
+    const name = nameInput.trim();
+    if (!name) {
+      setProjectError('Project name is required.');
+      return;
+    }
+    const pageId = generateId('page');
+    const payload = {
+      name,
+      description: '',
+      updatedAt: new Date().toISOString(),
+      pages: [
+        {
+          id: pageId,
+          title: 'Home',
+          path: '/',
+          nodes: []
+        }
+      ],
+      themeTokens: []
+    };
+    setProjectError(null);
+    try {
+      const response = await fetch('/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        throw new Error(`Project create failed: ${response.status}`);
+      }
+      const createdProject = (await response.json()) as Project;
+      setProject(createdProject);
+      setProjectList((prev) => [
+        {
+          id: createdProject.id,
+          name: createdProject.name,
+          updatedAt: createdProject.updatedAt
+        },
+        ...prev
+      ]);
+      setActiveProjectId(createdProject.id);
+      setCurrentPageId(createdProject.pages[0]?.id ?? null);
+      updateProjectRoute(createdProject.id);
+    } catch (error) {
+      setProjectError(error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
+
+  const handleRenameProject = async (projectId: string) => {
+    if (!authToken) {
+      return;
+    }
+    const currentName =
+      project?.id === projectId
+        ? project.name
+        : projectList.find((item) => item.id === projectId)?.name ?? '';
+    const nextNameInput = window.prompt('Rename project', currentName);
+    if (nextNameInput === null) {
+      return;
+    }
+    const nextName = nextNameInput.trim();
+    if (!nextName) {
+      setProjectError('Project name is required.');
+      return;
+    }
+    const response = await fetch(`/projects/${projectId}/metadata`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+      },
+      body: JSON.stringify({
+        name: nextName,
+        description: project?.id === projectId ? project.description : undefined
+      })
+    });
+    if (
+      handleAuthFailure(response, () =>
+        setProjectError('Session expired. Please sign in again.')
+      )
+    ) {
+      return;
+    }
+    if (!response.ok) {
+      setProjectError(`Rename failed: ${response.status}`);
+      return;
+    }
+    const updatedProject = (await response.json()) as Project;
+    applyProjectUpdate(updatedProject);
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!authToken) {
+      return;
+    }
+    const projectName =
+      project?.id === projectId
+        ? project.name
+        : projectList.find((item) => item.id === projectId)?.name ?? 'this project';
+    const confirmed = window.confirm(`Delete ${projectName}? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+    setProjectError(null);
+    const response = await fetch(`/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: {
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+      }
+    });
+    if (
+      handleAuthFailure(response, () =>
+        setProjectError('Session expired. Please sign in again.')
+      )
+    ) {
+      return;
+    }
+    if (!response.ok) {
+      setProjectError(`Delete failed: ${response.status}`);
+      return;
+    }
+    setProjectList((prev) => prev.filter((item) => item.id !== projectId));
+    if (activeProjectId === projectId) {
+      const remaining = projectList.filter((item) => item.id !== projectId);
+      const nextProjectId = remaining[0]?.id ?? null;
+      setActiveProjectId(nextProjectId);
+      setProject(null);
+      setCurrentPageId(null);
+      updateProjectRoute(nextProjectId);
+    }
+  };
+
+  const handleAddPage = async () => {
+    if (!project || !activeProjectId) {
+      return;
+    }
+    const titleInput = window.prompt('Page title', 'New page');
+    if (titleInput === null) {
+      return;
+    }
+    const title = titleInput.trim();
+    if (!title) {
+      setProjectError('Page title is required.');
+      return;
+    }
+    const pathInput = window.prompt('Page path', '/new-page');
+    if (pathInput === null) {
+      return;
+    }
+    const path = pathInput.trim();
+    if (!path) {
+      setProjectError('Page path is required.');
+      return;
+    }
+    const mutation = {
+      action: 'create',
+      id: generateId('page'),
+      title,
+      path,
+      nodes: []
+    };
+    const updated = await requestProjectUpdate({
+      pageMutations: [mutation],
+      updatedAt: new Date().toISOString()
+    });
+    if (updated) {
+      const newPage = updated.pages[updated.pages.length - 1];
+      if (newPage?.id) {
+        setCurrentPageId(newPage.id);
+      }
+    }
+  };
+
+  const handleRenamePage = async (pageId: string) => {
+    if (!project || !activeProjectId) {
+      return;
+    }
+    const page = project.pages.find((item) => item.id === pageId);
+    if (!page) {
+      return;
+    }
+    const titleInput = window.prompt('Rename page', page.title);
+    if (titleInput === null) {
+      return;
+    }
+    const nextTitle = titleInput.trim();
+    if (!nextTitle) {
+      setProjectError('Page title is required.');
+      return;
+    }
+    const pathInput = window.prompt('Page path', page.path);
+    if (pathInput === null) {
+      return;
+    }
+    const nextPath = pathInput.trim();
+    if (!nextPath) {
+      setProjectError('Page path is required.');
+      return;
+    }
+    await requestProjectUpdate({
+      pageMutations: [
+        {
+          action: 'update',
+          id: pageId,
+          title: nextTitle,
+          path: nextPath
+        }
+      ],
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const handleDeletePage = async (pageId: string) => {
+    if (!project || !activeProjectId) {
+      return;
+    }
+    const page = project.pages.find((item) => item.id === pageId);
+    const confirmed = window.confirm(
+      `Delete ${page?.title ?? 'this page'}? This cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+    await requestProjectUpdate({
+      pageMutations: [
+        {
+          action: 'delete',
+          id: pageId
+        }
+      ],
+      updatedAt: new Date().toISOString()
+    });
+  };
+
   if (!authToken) {
     return <AuthScreen />;
   }
@@ -643,6 +944,12 @@ export default function App() {
             onSelectPage={(pageId) => {
               setCurrentPageId(pageId);
             }}
+            onCreateProject={handleCreateProject}
+            onRenameProject={handleRenameProject}
+            onDeleteProject={handleDeleteProject}
+            onAddPage={handleAddPage}
+            onRenamePage={handleRenamePage}
+            onDeletePage={handleDeletePage}
             isLoadingProjects={isLoadingProjects}
           />
 
