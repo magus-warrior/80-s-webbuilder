@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 
 import type { Asset, Node, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
@@ -203,6 +203,7 @@ export default function EditorLayout({
     assets: false,
     theme: false
   });
+  const canvasBoundaryRef = useRef<HTMLDivElement | null>(null);
 
   const selectedNode = useMemo(
     () => findNodeById(nodes, selectedNodeId),
@@ -544,10 +545,12 @@ export default function EditorLayout({
             </div>
           </div>
           <div
-            className="relative flex-1 rounded-2xl border-neon-soft bg-black/80 p-6"
+            className="relative flex-1 overflow-hidden rounded-2xl border-neon-soft bg-black/80 p-6"
             style={cssVariables}
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
+            ref={canvasBoundaryRef}
+            data-canvas-boundary
           >
             <div
               className="pointer-events-none absolute inset-0 rounded-2xl"

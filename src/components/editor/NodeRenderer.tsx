@@ -313,6 +313,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
     if (!element) {
       return;
     }
+    const canvasBoundary = document.querySelector('[data-canvas-boundary]') ?? 'parent';
 
     const snapGridSize = Math.max(4, gridSize);
     const snapGrid = interact.snappers.grid({ x: snapGridSize, y: snapGridSize });
@@ -321,10 +322,24 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
         targets: [snapGrid]
       })
     ];
+    const dragModifiers = [
+      ...snapModifiers,
+      interact.modifiers.restrictRect({
+        restriction: canvasBoundary,
+        endOnly: true
+      })
+    ];
+    const resizeModifiers = [
+      ...snapModifiers,
+      interact.modifiers.restrictEdges({
+        outer: canvasBoundary,
+        endOnly: true
+      })
+    ];
 
     const interactable = interact(element)
       .draggable({
-        modifiers: snapModifiers,
+        modifiers: dragModifiers,
         listeners: {
           move(event) {
             const { x: currentX, y: currentY } = positionRef.current;
@@ -345,7 +360,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
           bottom: '.resize-handle-bottom',
           top: '.resize-handle-top'
         },
-        modifiers: snapModifiers,
+        modifiers: resizeModifiers,
         listeners: {
           move(event) {
             const { x: currentX, y: currentY } = positionRef.current;
