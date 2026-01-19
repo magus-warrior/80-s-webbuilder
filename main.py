@@ -4,7 +4,7 @@ import json
 import re
 import shutil
 import uuid
-from typing import Any
+from typing import Any, Iterable
 
 from fastapi import Body, Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -24,6 +24,8 @@ INDEX_FILE = DIST_DIR / "index.html"
 UPLOAD_DIR = ROOT_DIR / "public" / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 RESERVED_PUBLIC_SLUGS = {"projects", "assets", "auth", "uploads", "public"}
+MAX_PROJECT_NAME_LENGTH = 80
+MAX_PROJECT_DESCRIPTION_LENGTH = 280
 
 app.include_router(auth_router)
 
@@ -115,12 +117,70 @@ def update_project(
     )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    name = payload.get("name") or f"Project {project_id}"
-    project.name = name
-    project.data = payload
+    data = coerce_project_data(project)
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Project payload must be an object")
+    page_mutations = payload.pop("pageMutations", None)
+    incoming_pages = payload.get("pages")
+    data.update(payload)
+    if incoming_pages is not None:
+        if not isinstance(incoming_pages, list):
+            raise HTTPException(status_code=400, detail="Pages must be a list")
+        data["pages"] = incoming_pages
+    if page_mutations is not None:
+        data["pages"] = apply_page_mutations(data, page_mutations)
+    name = payload.get("name")
+    description = payload.get("description")
+    if name is not None or description is not None:
+        apply_project_metadata(project, data, name=name, description=description)
+    project.data = data
     db.commit()
     db.refresh(project)
     return serialize_project(project)
+
+
+@app.put("/projects/{project_id}/metadata")
+def update_project_metadata(
+    project_id: int,
+    payload: dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Metadata payload must be an object")
+    data = coerce_project_data(project)
+    name = payload.get("name")
+    description = payload.get("description")
+    apply_project_metadata(project, data, name=name, description=description, require_name=True)
+    project.data = data
+    db.commit()
+    db.refresh(project)
+    return serialize_project(project)
+
+
+@app.delete("/projects/{project_id}")
+def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    db.delete(project)
+    db.commit()
+    return {"status": "deleted", "id": str(project_id)}
 
 
 @app.get("/projects")
@@ -183,7 +243,15 @@ def create_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Project payload must be an object")
     name = payload.get("name") or "Untitled Project"
+    name = validate_project_name(name)
+    description = payload.get("description")
+    if description is not None:
+        description = validate_project_description(description)
+        payload["description"] = description
+    payload["name"] = name
     slug = build_slug(name)
     project = Project(
         owner_id=current_user.id,
@@ -202,6 +270,147 @@ def create_project(
 def build_slug(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     return slug or "project"
+
+
+def validate_project_name(name: Any) -> str:
+    if not isinstance(name, str):
+        raise HTTPException(status_code=400, detail="Project name must be a string")
+    normalized = name.strip()
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Project name is required")
+    if len(normalized) > MAX_PROJECT_NAME_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Project name must be {MAX_PROJECT_NAME_LENGTH} characters or fewer",
+        )
+    return normalized
+
+
+def validate_project_description(description: Any) -> str:
+    if not isinstance(description, str):
+        raise HTTPException(status_code=400, detail="Project description must be a string")
+    normalized = description.strip()
+    if len(normalized) > MAX_PROJECT_DESCRIPTION_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Project description must be "
+                f"{MAX_PROJECT_DESCRIPTION_LENGTH} characters or fewer"
+            ),
+        )
+    return normalized
+
+
+def apply_project_metadata(
+    project: Project,
+    data: dict[str, Any],
+    *,
+    name: Any | None = None,
+    description: Any | None = None,
+    require_name: bool = False,
+) -> None:
+    next_name = None
+    if name is not None:
+        next_name = validate_project_name(name)
+        project.name = next_name
+        project.slug = build_slug(next_name)
+        data["name"] = next_name
+    elif require_name:
+        raise HTTPException(status_code=400, detail="Project name is required")
+    if description is not None:
+        next_description = validate_project_description(description)
+        data["description"] = next_description
+
+
+def apply_page_mutations(
+    data: dict[str, Any],
+    mutations: Any,
+) -> list[dict[str, Any]]:
+    if not isinstance(mutations, Iterable) or isinstance(mutations, (str, bytes, dict)):
+        raise HTTPException(status_code=400, detail="Page mutations must be a list")
+    existing_pages = data.get("pages")
+    pages: list[dict[str, Any]] = (
+        existing_pages if isinstance(existing_pages, list) else []
+    )
+    updated_pages = [page.copy() for page in pages if isinstance(page, dict)]
+    for mutation in mutations:
+        if not isinstance(mutation, dict):
+            raise HTTPException(status_code=400, detail="Each page mutation must be an object")
+        action = mutation.get("action")
+        if action == "create":
+            created = build_page_from_mutation(mutation)
+            updated_pages.append(created)
+        elif action == "update":
+            page_id = mutation.get("id")
+            if not page_id or not isinstance(page_id, str):
+                raise HTTPException(status_code=400, detail="Page id is required for updates")
+            updated_pages = [
+                update_page_from_mutation(page, mutation)
+                if page.get("id") == page_id
+                else page
+                for page in updated_pages
+            ]
+            if not any(page.get("id") == page_id for page in updated_pages):
+                raise HTTPException(status_code=404, detail="Page not found")
+        elif action == "delete":
+            page_id = mutation.get("id")
+            if not page_id or not isinstance(page_id, str):
+                raise HTTPException(status_code=400, detail="Page id is required for deletion")
+            next_pages = [page for page in updated_pages if page.get("id") != page_id]
+            if len(next_pages) == len(updated_pages):
+                raise HTTPException(status_code=404, detail="Page not found")
+            updated_pages = next_pages
+        else:
+            raise HTTPException(status_code=400, detail="Invalid page mutation action")
+    return updated_pages
+
+
+def build_page_from_mutation(mutation: dict[str, Any]) -> dict[str, Any]:
+    title = mutation.get("title")
+    path = mutation.get("path")
+    if not isinstance(title, str) or not title.strip():
+        raise HTTPException(status_code=400, detail="Page title is required")
+    if not isinstance(path, str) or not path.strip():
+        raise HTTPException(status_code=400, detail="Page path is required")
+    page_id = mutation.get("id")
+    if page_id is None:
+        page_id = f"page-{uuid.uuid4().hex[:8]}"
+    if not isinstance(page_id, str):
+        raise HTTPException(status_code=400, detail="Page id must be a string")
+    nodes = mutation.get("nodes")
+    if nodes is None:
+        nodes = []
+    if not isinstance(nodes, list):
+        raise HTTPException(status_code=400, detail="Page nodes must be a list")
+    return {
+        "id": page_id,
+        "title": title.strip(),
+        "path": path.strip(),
+        "nodes": nodes,
+    }
+
+
+def update_page_from_mutation(
+    page: dict[str, Any],
+    mutation: dict[str, Any],
+) -> dict[str, Any]:
+    updated = {**page}
+    if "title" in mutation:
+        title = mutation.get("title")
+        if not isinstance(title, str) or not title.strip():
+            raise HTTPException(status_code=400, detail="Page title is required")
+        updated["title"] = title.strip()
+    if "path" in mutation:
+        path = mutation.get("path")
+        if not isinstance(path, str) or not path.strip():
+            raise HTTPException(status_code=400, detail="Page path is required")
+        updated["path"] = path.strip()
+    if "nodes" in mutation:
+        nodes = mutation.get("nodes")
+        if not isinstance(nodes, list):
+            raise HTTPException(status_code=400, detail="Page nodes must be a list")
+        updated["nodes"] = nodes
+    return updated
 
 
 def normalize_public_slug(value: str) -> str:
