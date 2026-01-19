@@ -585,7 +585,7 @@ export default function App() {
   return (
     <ThemeProvider tokens={themeTokens} onTokensChange={setThemeTokens}>
       <div className="min-h-screen bg-gradient-to-br from-black via-slate-950 to-slate-900 text-slate-100">
-        <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-16 px-6 py-12">
+        <div className="mx-auto flex min-h-screen w-full max-w-screen-2xl flex-col gap-16 px-6 py-12">
           <header className="flex flex-col gap-6 rounded-3xl border-neon bg-slate-950/80 p-10 shadow-xl neon-glow-soft">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div>
