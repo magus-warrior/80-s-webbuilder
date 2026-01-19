@@ -132,7 +132,14 @@ def update_project(
     name = payload.get("name")
     description = payload.get("description")
     if name is not None or description is not None:
-        apply_project_metadata(project, data, name=name, description=description)
+        apply_project_metadata(
+            project,
+            data,
+            db=db,
+            owner_id=current_user.id,
+            name=name,
+            description=description,
+        )
     project.data = data
     db.commit()
     db.refresh(project)
@@ -158,7 +165,15 @@ def update_project_metadata(
     data = coerce_project_data(project)
     name = payload.get("name")
     description = payload.get("description")
-    apply_project_metadata(project, data, name=name, description=description, require_name=True)
+    apply_project_metadata(
+        project,
+        data,
+        db=db,
+        owner_id=current_user.id,
+        name=name,
+        description=description,
+        require_name=True,
+    )
     project.data = data
     db.commit()
     db.refresh(project)
@@ -252,7 +267,7 @@ def create_project(
         description = validate_project_description(description)
         payload["description"] = description
     payload["name"] = name
-    slug = build_slug(name)
+    slug = build_unique_project_slug(name, current_user.id, db)
     project = Project(
         owner_id=current_user.id,
         name=name,
@@ -305,6 +320,8 @@ def apply_project_metadata(
     project: Project,
     data: dict[str, Any],
     *,
+    db: Session,
+    owner_id: int,
     name: Any | None = None,
     description: Any | None = None,
     require_name: bool = False,
@@ -313,7 +330,12 @@ def apply_project_metadata(
     if name is not None:
         next_name = validate_project_name(name)
         project.name = next_name
-        project.slug = build_slug(next_name)
+        project.slug = build_unique_project_slug(
+            next_name,
+            owner_id,
+            db,
+            exclude_project_id=project.id,
+        )
         data["name"] = next_name
     elif require_name:
         raise HTTPException(status_code=400, detail="Project name is required")
@@ -442,6 +464,40 @@ def is_public_slug_available(slug: str, project: Project, db: Session) -> bool:
     return existing is None
 
 
+def is_project_slug_available(
+    slug: str,
+    owner_id: int,
+    db: Session,
+    *,
+    exclude_project_id: int | None = None,
+) -> bool:
+    query = db.query(Project).filter(Project.owner_id == owner_id, Project.slug == slug)
+    if exclude_project_id is not None:
+        query = query.filter(Project.id != exclude_project_id)
+    return query.first() is None
+
+
+def build_unique_project_slug(
+    name: str,
+    owner_id: int,
+    db: Session,
+    *,
+    exclude_project_id: int | None = None,
+) -> str:
+    base_slug = build_slug(name)
+    candidate = base_slug
+    suffix = 1
+    while not is_project_slug_available(
+        candidate,
+        owner_id,
+        db,
+        exclude_project_id=exclude_project_id,
+    ):
+        suffix += 1
+        candidate = f"{base_slug}-{suffix}"
+    return candidate
+
+
 def is_reserved_public_slug(slug: str) -> bool:
     return slug in RESERVED_PUBLIC_SLUGS
 
@@ -514,6 +570,35 @@ def validate_public_slug(
     return {
         "slug": normalized,
         "available": is_public_slug_available(normalized, project, db),
+    }
+
+
+@app.get("/projects/validate-name")
+def validate_project_name_endpoint(
+    name: str = Query(...),
+    project_id: int | None = Query(None, alias="projectId"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    normalized = validate_project_name(name)
+    if project_id is not None:
+        project = (
+            db.query(Project)
+            .filter(Project.id == project_id, Project.owner_id == current_user.id)
+            .first()
+        )
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+    slug = build_slug(normalized)
+    return {
+        "name": normalized,
+        "slug": slug,
+        "available": is_project_slug_available(
+            slug,
+            current_user.id,
+            db,
+            exclude_project_id=project_id,
+        ),
     }
 
 

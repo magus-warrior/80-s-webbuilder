@@ -628,22 +628,55 @@ export default function App() {
     };
   }, [editorNodes, resolvedPageId, themeTokens]);
 
-  const handleCreateProject = async () => {
+  const validateProjectName = async (
+    name: string,
+    projectId?: string | null
+  ): Promise<{ name: string; slug: string; available: boolean } | null> => {
     if (!authToken) {
-      return;
+      return null;
     }
-    const nameInput = window.prompt('Project name', 'Untitled Project');
-    if (nameInput === null) {
-      return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return null;
     }
-    const name = nameInput.trim();
-    if (!name) {
+    try {
+      const params = new URLSearchParams({ name: trimmed });
+      if (projectId) {
+        params.set('projectId', projectId);
+      }
+      const response = await fetch(`/projects/validate-name?${params.toString()}`, {
+        headers: {
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        }
+      });
+      if (
+        handleAuthFailure(response, () =>
+          setProjectError('Session expired. Please sign in again.')
+        )
+      ) {
+        return null;
+      }
+      if (!response.ok) {
+        return null;
+      }
+      return (await response.json()) as { name: string; slug: string; available: boolean };
+    } catch {
+      return null;
+    }
+  };
+
+  const handleCreateProject = async (name: string) => {
+    if (!authToken) {
+      return false;
+    }
+    const trimmed = name.trim();
+    if (!trimmed) {
       setProjectError('Project name is required.');
-      return;
+      return false;
     }
     const pageId = generateId('page');
     const payload = {
-      name,
+      name: trimmed,
       description: '',
       updatedAt: new Date().toISOString(),
       pages: [
@@ -682,27 +715,21 @@ export default function App() {
       setActiveProjectId(createdProject.id);
       setCurrentPageId(createdProject.pages[0]?.id ?? null);
       updateProjectRoute(createdProject.id);
+      return true;
     } catch (error) {
       setProjectError(error instanceof Error ? error.message : 'Unknown error');
+      return false;
     }
   };
 
-  const handleRenameProject = async (projectId: string) => {
+  const handleRenameProject = async (projectId: string, name: string) => {
     if (!authToken) {
-      return;
+      return false;
     }
-    const currentName =
-      project?.id === projectId
-        ? project.name
-        : projectList.find((item) => item.id === projectId)?.name ?? '';
-    const nextNameInput = window.prompt('Rename project', currentName);
-    if (nextNameInput === null) {
-      return;
-    }
-    const nextName = nextNameInput.trim();
-    if (!nextName) {
+    const trimmed = name.trim();
+    if (!trimmed) {
       setProjectError('Project name is required.');
-      return;
+      return false;
     }
     const response = await fetch(`/projects/${projectId}/metadata`, {
       method: 'PUT',
@@ -711,7 +738,7 @@ export default function App() {
         ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
       },
       body: JSON.stringify({
-        name: nextName,
+        name: trimmed,
         description: project?.id === projectId ? project.description : undefined
       })
     });
@@ -720,14 +747,15 @@ export default function App() {
         setProjectError('Session expired. Please sign in again.')
       )
     ) {
-      return;
+      return false;
     }
     if (!response.ok) {
       setProjectError(`Rename failed: ${response.status}`);
-      return;
+      return false;
     }
     const updatedProject = (await response.json()) as Project;
     applyProjectUpdate(updatedProject);
+    return true;
   };
 
   const handleDeleteProject = async (projectId: string) => {
@@ -946,6 +974,7 @@ export default function App() {
             }}
             onCreateProject={handleCreateProject}
             onRenameProject={handleRenameProject}
+            onValidateProjectName={validateProjectName}
             onDeleteProject={handleDeleteProject}
             onAddPage={handleAddPage}
             onRenamePage={handleRenamePage}
