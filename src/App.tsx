@@ -59,6 +59,8 @@ export default function App() {
   const latestProject = useRef<Project | null>(null);
   const saveRequestId = useRef(0);
   const lastLoadedProjectId = useRef<string | null>(null);
+  const lastSyncedProjectId = useRef<string | null>(null);
+  const lastSyncedPageId = useRef<string | null>(null);
   const slugValidationTimeout = useRef<number | null>(null);
 
   const handleAuthFailure = (response: Response, onFail?: () => void) => {
@@ -599,13 +601,23 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (previewPage?.nodes) {
-      const currentNodes = useEditorStore.getState().nodes;
-      if (JSON.stringify(currentNodes) !== JSON.stringify(previewPage.nodes)) {
-        setNodes(previewPage.nodes);
-      }
+    if (!previewPage?.nodes) {
+      return;
     }
-  }, [previewPage, setNodes]);
+    const currentNodes = useEditorStore.getState().nodes;
+    const projectId = project?.id ?? null;
+    const shouldSync =
+      currentNodes.length === 0 ||
+      lastSyncedProjectId.current !== projectId ||
+      lastSyncedPageId.current !== previewPage.id;
+    if (shouldSync && JSON.stringify(currentNodes) !== JSON.stringify(previewPage.nodes)) {
+      setNodes(previewPage.nodes);
+    }
+    if (shouldSync) {
+      lastSyncedProjectId.current = projectId;
+      lastSyncedPageId.current = previewPage.id;
+    }
+  }, [previewPage, project, setNodes]);
 
   useEffect(() => {
     if (!project) {
