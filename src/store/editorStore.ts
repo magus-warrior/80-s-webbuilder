@@ -316,6 +316,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     addNode: (node) => {
       pushSnapshot();
+      console.info('[editor] addNode', {
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        childrenCount: node.children?.length ?? 0
+      });
       set((state) => ({
         nodes: [...state.nodes, node],
         selectedNodeId: node.id
@@ -323,6 +329,13 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     addNodeToContainer: (containerId, node) => {
       pushSnapshot();
+      console.info('[editor] addNodeToContainer', {
+        containerId,
+        id: node.id,
+        type: node.type,
+        name: node.name,
+        childrenCount: node.children?.length ?? 0
+      });
       set((state) => ({
         nodes: addNodeToTree(state.nodes, containerId, node),
         selectedNodeId: node.id
