@@ -606,11 +606,18 @@ export default function App() {
     }
     const currentNodes = useEditorStore.getState().nodes;
     const projectId = project?.id ?? null;
+    const isInitialSync =
+      lastSyncedProjectId.current === null && lastSyncedPageId.current === null;
     const shouldSync =
       currentNodes.length === 0 ||
       lastSyncedProjectId.current !== projectId ||
       lastSyncedPageId.current !== previewPage.id;
-    if (shouldSync && JSON.stringify(currentNodes) !== JSON.stringify(previewPage.nodes)) {
+    const shouldApplyNodes = !(isInitialSync && currentNodes.length > 0);
+    if (
+      shouldSync &&
+      shouldApplyNodes &&
+      JSON.stringify(currentNodes) !== JSON.stringify(previewPage.nodes)
+    ) {
       setNodes(previewPage.nodes);
     }
     if (shouldSync) {
