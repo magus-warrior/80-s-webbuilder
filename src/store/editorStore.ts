@@ -263,6 +263,9 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     setNodes: (nodes) => {
       pushSnapshot();
+      console.info('[editor] setNodes', {
+        nextCount: nodes.length
+      });
       set(() => ({
         nodes
       }));
@@ -309,6 +312,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
         return;
       }
       pushSnapshot();
+      console.info('[editor] removeNode', {
+        id: nodeId,
+        previousCount: currentNodes.length,
+        nextCount: nextNodes.length
+      });
       set((state) => ({
         nodes: nextNodes,
         selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId

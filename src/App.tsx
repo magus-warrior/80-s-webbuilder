@@ -618,6 +618,15 @@ export default function App() {
       shouldApplyNodes &&
       JSON.stringify(currentNodes) !== JSON.stringify(previewPage.nodes)
     ) {
+      console.info('[editor] sync nodes from project', {
+        projectId,
+        pageId: previewPage.id,
+        currentCount: currentNodes.length,
+        nextCount: previewPage.nodes.length,
+        isInitialSync,
+        shouldSync,
+        shouldApplyNodes
+      });
       setNodes(previewPage.nodes);
     }
     if (shouldSync) {
