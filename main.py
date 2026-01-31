@@ -6,7 +6,7 @@ import shutil
 import uuid
 from typing import Any, Iterable
 
-from fastapi import Body, Depends, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -28,6 +28,15 @@ MAX_PROJECT_NAME_LENGTH = 80
 MAX_PROJECT_DESCRIPTION_LENGTH = 280
 
 app.include_router(auth_router)
+
+
+@app.middleware("http")
+async def spa_refresh_fallback(request: Request, call_next):
+    if request.method == "GET" and request.url.path.startswith("/projects/"):
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept and "application/json" not in accept and INDEX_FILE.exists():
+            return FileResponse(INDEX_FILE)
+    return await call_next(request)
 
 
 @app.on_event("startup")
@@ -214,26 +223,37 @@ def list_projects(
 
 @app.get("/assets")
 def list_assets(
+    project_id: int | None = Query(None, alias="projectId"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
-    assets = (
-        db.query(Asset)
-        .filter(Asset.owner_id == current_user.id)
-        .order_by(Asset.created_at.desc())
-        .all()
-    )
+    query = db.query(Asset).filter(Asset.owner_id == current_user.id)
+    if project_id is not None:
+        query = query.filter(Asset.project_id == project_id)
+    assets = query.order_by(Asset.created_at.desc()).all()
     return [serialize_asset(asset) for asset in assets]
 
 
 @app.post("/assets", status_code=201)
 def upload_asset(
     file: UploadFile = File(...),
+    project_id: str | None = Form(None, alias="projectId"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename is required")
+    project = None
+    if project_id:
+        if not project_id.isdigit():
+            raise HTTPException(status_code=400, detail="Project id must be numeric")
+        project = (
+            db.query(Project)
+            .filter(Project.id == int(project_id), Project.owner_id == current_user.id)
+            .first()
+        )
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
 
     extension = Path(file.filename).suffix
     stored_name = f"{uuid.uuid4().hex}{extension}"
@@ -243,6 +263,7 @@ def upload_asset(
 
     asset = Asset(
         owner_id=current_user.id,
+        project_id=project.id if project else None,
         url=f"/uploads/{stored_name}",
         filename=file.filename,
     )
@@ -533,6 +554,7 @@ def serialize_project_summary(project: Project) -> dict[str, Any]:
 def serialize_asset(asset: Asset) -> dict[str, Any]:
     return {
         "id": str(asset.id),
+        "projectId": str(asset.project_id) if asset.project_id is not None else None,
         "url": asset.url,
         "filename": asset.filename,
         "createdAt": asset.created_at.isoformat() if asset.created_at else None,

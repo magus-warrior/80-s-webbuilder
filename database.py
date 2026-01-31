@@ -27,6 +27,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_owner_column("projects")
     _ensure_owner_column("assets")
+    _ensure_asset_project_column()
 
 
 def _ensure_owner_column(table_name: str) -> None:
@@ -56,3 +57,24 @@ def _ensure_owner_column(table_name: str) -> None:
             connection.execute(
                 text(f"ALTER TABLE {table_name} ALTER COLUMN owner_id SET NOT NULL")
             )
+
+
+def _ensure_asset_project_column() -> None:
+    inspector = inspect(engine)
+    if "assets" not in inspector.get_table_names():
+        return
+    columns = {column["name"] for column in inspector.get_columns("assets")}
+    if "project_id" in columns:
+        return
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE assets ADD COLUMN project_id INTEGER"))
+        connection.execute(
+            text(
+                "ALTER TABLE assets "
+                "ADD CONSTRAINT assets_project_id_fkey "
+                "FOREIGN KEY (project_id) REFERENCES projects(id)"
+            )
+        )
+        connection.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_assets_project_id ON assets (project_id)")
+        )

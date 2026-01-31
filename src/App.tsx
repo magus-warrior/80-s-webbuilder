@@ -409,7 +409,10 @@ export default function App() {
       setIsLoadingAssets(true);
       setAssetError(null);
       try {
-        const response = await fetch('/assets', {
+        const assetUrl = activeProjectId
+          ? `/assets?projectId=${encodeURIComponent(activeProjectId)}`
+          : '/assets';
+        const response = await fetch(assetUrl, {
           headers: { Authorization: `Bearer ${authToken}` }
         });
         if (
@@ -432,7 +435,7 @@ export default function App() {
     };
 
     void loadAssets();
-  }, [authToken]);
+  }, [authToken, activeProjectId]);
 
   useEffect(() => {
     if (!authToken || !activeProjectId) {
@@ -579,6 +582,9 @@ export default function App() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (activeProjectId) {
+        formData.append('projectId', activeProjectId);
+      }
       const response = await fetch('/assets', {
         method: 'POST',
         headers: {
