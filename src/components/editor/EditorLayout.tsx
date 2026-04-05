@@ -31,6 +31,30 @@ const findNodeById = (nodes: Node[], nodeId: string | null): Node | null => {
   return null;
 };
 
+const findNodePathById = (nodes: Node[], nodeId: string | null): Node[] => {
+  if (!nodeId) {
+    return [];
+  }
+
+  const search = (items: Node[], path: Node[]): Node[] | null => {
+    for (const item of items) {
+      const nextPath = [...path, item];
+      if (item.id === nodeId) {
+        return nextPath;
+      }
+      if (item.children?.length) {
+        const result = search(item.children, nextPath);
+        if (result) {
+          return result;
+        }
+      }
+    }
+    return null;
+  };
+
+  return search(nodes, []) ?? [];
+};
+
 type LayerItem = {
   node: Node;
   depth: number;
@@ -238,7 +262,30 @@ export default function EditorLayout({
     () => findNodeById(nodes, selectedNodeId),
     [nodes, selectedNodeId]
   );
-  const layerItems = useMemo(() => buildLayerItems(nodes), [nodes]);
+  const selectedNodePath = useMemo(
+    () => findNodePathById(nodes, selectedNodeId),
+    [nodes, selectedNodeId]
+  );
+  const layerScopeNode = useMemo(() => {
+    if (!selectedNodePath.length) {
+      return null;
+    }
+
+    for (let index = selectedNodePath.length - 1; index >= 0; index -= 1) {
+      const candidate = selectedNodePath[index];
+      if (candidate.children?.length) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }, [selectedNodePath]);
+  const layerItems = useMemo(() => {
+    if (layerScopeNode) {
+      return buildLayerItems([layerScopeNode]);
+    }
+    return buildLayerItems(nodes);
+  }, [nodes, layerScopeNode]);
   const gridTemplateColumns = useMemo(
     () =>
       `${isLeftSidebarOpen ? 'minmax(220px,0.8fr)' : 'minmax(0,0)'} minmax(0,2fr) ${
@@ -851,6 +898,11 @@ export default function EditorLayout({
                 {layerItems.length}
               </span>
             </div>
+            {layerScopeNode ? (
+              <p className="mt-2 text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
+                Scoped to: {layerScopeNode.name}
+              </p>
+            ) : null}
             <div className="mt-3 space-y-1.5">
               {layerItems.length === 0 ? (
                 <p className="text-xs text-slate-400">No layers yet.</p>

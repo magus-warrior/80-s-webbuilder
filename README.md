@@ -1,6 +1,9 @@
 # demon.beauty
 demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 
+## Editor behavior
+- The Layers panel is context-aware: when a container (or a child inside a container) is selected, the panel only shows that container and the items inside it to reduce visual noise.
+
 ## Deploy with systemd
 1. Install backend dependencies:
    ```bash
