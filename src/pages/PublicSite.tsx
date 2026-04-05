@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import NodeRenderer from '../components/editor/NodeRenderer';
+import RenderedNodesPreview from '../components/editor/RenderedNodesPreview';
 import { ThemeProvider, useTheme } from '../components/editor/ThemeProvider';
 import type { Project } from '../models';
 
@@ -67,33 +67,13 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
           </section>
         ) : (
           <section className="rounded-2xl border border-slate-900/80 bg-black/60 p-6 shadow-lg shadow-black/60">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">
-                  Rendered Nodes
-                </p>
-                <h2 className="mt-2 text-xl font-semibold text-white">
-                  {page?.title ?? 'Untitled Page'}
-                </h2>
-                <p className="mt-2 text-xs text-slate-400">
-                  {nodes.length} nodes published
-                </p>
-              </div>
-              <span className="rounded-full border-neon-soft px-4 py-2 text-[0.65rem] uppercase tracking-[0.3em] text-slate-200">
-                View Only
-              </span>
-            </div>
-            <div className="mt-6 space-y-4">
-              {nodes.length > 0 ? (
-                nodes.map((node) => (
-                  <NodeRenderer key={node.id} node={node} interactive={false} />
-                ))
-              ) : (
-                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-6 text-sm text-slate-400">
-                  No nodes are available for this published page.
-                </div>
-              )}
-            </div>
+            <RenderedNodesPreview
+              title={page?.title ?? 'Untitled Page'}
+              subtitle={`${nodes.length} nodes published`}
+              nodes={nodes}
+              badgeLabel="View Only"
+              emptyStateLabel="No nodes are available for this published page."
+            />
           </section>
         )}
       </div>

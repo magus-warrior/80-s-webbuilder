@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Asset, Node, Project, ProjectSummary, ThemeToken } from './models';
 import AuthScreen from './components/auth/AuthScreen';
 import EditorLayout from './components/editor/EditorLayout';
-import NodeRenderer from './components/editor/NodeRenderer';
+import RenderedNodesPreview from './components/editor/RenderedNodesPreview';
 import { ThemeProvider } from './components/editor/ThemeProvider';
 import { useAuthStore } from './store/authStore';
 import { useEditorStore } from './store/editorStore';
@@ -1313,24 +1313,11 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-white">Rendered Preview</p>
-                        <p className="text-xs text-slate-400">
-                          {previewPage ? `${previewPage.title} nodes` : 'No page selected'}
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-slate-700/80 bg-black/60 px-3 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-slate-400">
-                        Renderer
-                      </span>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      {previewNodes.map((node) => (
-                        <NodeRenderer key={node.id} node={node} interactive={false} />
-                      ))}
-                    </div>
-                  </div>
+                  <RenderedNodesPreview
+                    title="Rendered Preview"
+                    subtitle={previewPage ? `${previewPage.title} nodes` : 'No page selected'}
+                    nodes={previewNodes}
+                  />
                 </div>
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-transparent bg-neon-gradient bg-clip-text">
