@@ -280,6 +280,9 @@ export default function App() {
         throw new Error('Unable to publish because the latest edits could not be saved.');
       }
       const payload: Record<string, unknown> = { isPublished: nextPublished };
+      if (resolvedPageId) {
+        payload.publicPageId = resolvedPageId;
+      }
       if (publicSlugDraft.trim()) {
         payload.publicSlug = publicSlugDraft.trim();
       }
