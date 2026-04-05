@@ -8,6 +8,7 @@ export interface Project {
   updatedAt: string;
   slug?: string | null;
   publicSlug?: string | null;
+  publicPageId?: string | null;
   isPublished?: boolean;
   publishedAt?: string | null;
   pages: Page[];

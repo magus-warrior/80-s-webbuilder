@@ -89,6 +89,7 @@ def publish_project(
         raise HTTPException(status_code=404, detail="Project not found")
     is_published = bool(payload.get("isPublished"))
     public_slug_input = payload.get("publicSlug")
+    public_page_id = payload.get("publicPageId")
     if is_published:
         project.is_published = True
         if public_slug_input:
@@ -98,6 +99,20 @@ def publish_project(
             project.public_slug = public_slug
         if not project.public_slug:
             project.public_slug = build_public_slug(project, db)
+        project_data = coerce_project_data(project)
+        pages = project_data.get("pages")
+        if isinstance(public_page_id, str) and public_page_id.strip() and isinstance(pages, list):
+            matched_page_id = next(
+                (
+                    page.get("id")
+                    for page in pages
+                    if isinstance(page, dict) and page.get("id") == public_page_id
+                ),
+                None,
+            )
+            if matched_page_id is not None:
+                project_data["publicPageId"] = matched_page_id
+                project.data = project_data
         if project.published_at is None:
             project.published_at = datetime.now(timezone.utc)
     else:

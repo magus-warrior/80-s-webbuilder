@@ -15,7 +15,9 @@ type PublicSiteShellProps = {
 
 function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
   const { cssVariables } = useTheme();
-  const page = project?.pages?.[0];
+  const page =
+    project?.pages?.find((entry) => entry.id === project.publicPageId) ??
+    project?.pages?.[0];
   const nodes = page?.nodes ?? [];
   const publishedAt = project?.publishedAt
     ? new Date(project.publishedAt).toLocaleString()
