@@ -101,16 +101,18 @@ def publish_project(
             project.public_slug = build_public_slug(project, db)
         project_data = coerce_project_data(project)
         pages = project_data.get("pages")
-        if public_page_id is not None:
-            if not isinstance(public_page_id, str) or not public_page_id.strip():
-                raise HTTPException(status_code=400, detail="publicPageId must be a non-empty string")
-            if not isinstance(pages, list) or not any(
-                isinstance(page, dict) and page.get("id") == public_page_id
-                for page in pages
-            ):
-                raise HTTPException(status_code=400, detail="publicPageId does not exist on this project")
-            project_data["publicPageId"] = public_page_id
-            project.data = project_data
+        if isinstance(public_page_id, str) and public_page_id.strip() and isinstance(pages, list):
+            matched_page_id = next(
+                (
+                    page.get("id")
+                    for page in pages
+                    if isinstance(page, dict) and page.get("id") == public_page_id
+                ),
+                None,
+            )
+            if matched_page_id is not None:
+                project_data["publicPageId"] = matched_page_id
+                project.data = project_data
         if project.published_at is None:
             project.published_at = datetime.now(timezone.utc)
     else:
