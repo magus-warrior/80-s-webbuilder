@@ -370,25 +370,40 @@ export default function App() {
         }
         const projects = (await response.json()) as ProjectSummary[];
         if (projects.length === 0) {
-          const seedUrl = new URL(
-            `${import.meta.env.BASE_URL}sample-project.json`,
-            window.location.origin
+          const seedUrls = Array.from(
+            new Set([
+              '/sample-project.json',
+              new URL(
+                `${import.meta.env.BASE_URL}sample-project.json`,
+                window.location.origin
+              ).toString()
+            ])
           );
-          const seedResponse = await fetch(seedUrl.toString());
-          if (!seedResponse.ok) {
-            throw new Error(`Seed request failed: ${seedResponse.status}`);
+          const seedFailures: string[] = [];
+          let seedData: Project | null = null;
+
+          for (const url of seedUrls) {
+            const seedResponse = await fetch(url);
+            if (!seedResponse.ok) {
+              seedFailures.push(`${url} -> ${seedResponse.status}`);
+              continue;
+            }
+            const seedContentType = seedResponse.headers.get('content-type');
+            if (!seedContentType?.includes('application/json')) {
+              const seedBody = await seedResponse.text();
+              seedFailures.push(
+                `${url} -> ${seedContentType ?? 'unknown content type'} (${seedBody.slice(0, 80)})`
+              );
+              continue;
+            }
+            seedData = (await seedResponse.json()) as Project;
+            break;
           }
-          const seedContentType = seedResponse.headers.get('content-type');
-          if (!seedContentType?.includes('application/json')) {
-            const seedBody = await seedResponse.text();
-            throw new Error(
-              `Seed data invalid: ${seedContentType ?? 'unknown content type'} (${seedBody.slice(
-                0,
-                80
-              )})`
-            );
+
+          if (!seedData) {
+            throw new Error(`Seed request failed: ${seedFailures.join(' | ')}`);
           }
-          const seedData = (await seedResponse.json()) as Project;
+
           const createdResponse = await fetch('/projects', {
             method: 'POST',
             headers: {
