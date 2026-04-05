@@ -24,6 +24,24 @@ const features = [
 ];
 
 const reservedPublicSlugs = new Set(['projects', 'assets', 'auth', 'uploads', 'public']);
+const defaultSampleProjectPath = '/sample-project.json';
+
+const resolveSampleProjectUrls = () => {
+  const urls = new Set<string>([defaultSampleProjectPath]);
+  const baseUrl = typeof import.meta.env.BASE_URL === 'string' ? import.meta.env.BASE_URL : '/';
+  const normalizedBaseUrl = baseUrl.trim();
+  if (!normalizedBaseUrl) {
+    return Array.from(urls);
+  }
+  if (/^https?:\/\//i.test(normalizedBaseUrl)) {
+    urls.add(`${normalizedBaseUrl.replace(/\/+$/, '')}/sample-project.json`);
+    return Array.from(urls);
+  }
+  const basePath = normalizedBaseUrl.startsWith('/') ? normalizedBaseUrl : `/${normalizedBaseUrl}`;
+  const cleanBasePath = basePath.replace(/\/+$/, '');
+  urls.add(`${cleanBasePath}/sample-project.json`);
+  return Array.from(urls);
+};
 
 export default function App() {
   const [project, setProject] = useState<Project | null>(null);
@@ -377,15 +395,7 @@ export default function App() {
         }
         const projects = (await response.json()) as ProjectSummary[];
         if (projects.length === 0) {
-          const seedUrls = Array.from(
-            new Set([
-              '/sample-project.json',
-              new URL(
-                `${import.meta.env.BASE_URL}sample-project.json`,
-                window.location.origin
-              ).toString()
-            ])
-          );
+          const seedUrls = resolveSampleProjectUrls();
           const seedFailures: string[] = [];
           let seedData: Project | null = null;
 
