@@ -217,9 +217,13 @@ export default function App() {
     if (!baseProject) {
       return true;
     }
+    const hadPendingSave = Boolean(saveTimeout.current);
     if (saveTimeout.current) {
       window.clearTimeout(saveTimeout.current);
       saveTimeout.current = null;
+    }
+    if (hadPendingSave) {
+      return persistProject(baseProject);
     }
     const currentNodes = useEditorStore.getState().nodes;
     const currentPageId = useEditorStore.getState().currentPageId;
