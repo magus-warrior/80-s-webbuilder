@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import copy
 from pathlib import Path
 import json
 import re
@@ -579,13 +580,13 @@ def serialize_asset(asset: Asset) -> dict[str, Any]:
 def coerce_project_data(project: Project) -> dict[str, Any]:
     data = project.data
     if isinstance(data, dict):
-        return data
+        return copy.deepcopy(data)
     if isinstance(data, str):
         try:
             parsed = json.loads(data)
         except json.JSONDecodeError:
             return {}
-        return parsed if isinstance(parsed, dict) else {}
+        return copy.deepcopy(parsed) if isinstance(parsed, dict) else {}
     return {}
 
 
