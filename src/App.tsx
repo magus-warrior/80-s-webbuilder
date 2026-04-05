@@ -7,6 +7,7 @@ import NodeRenderer from './components/editor/NodeRenderer';
 import { ThemeProvider } from './components/editor/ThemeProvider';
 import { useAuthStore } from './store/authStore';
 import { useEditorStore } from './store/editorStore';
+import { localSampleProject } from './sampleProject';
 
 const features = [
   {
@@ -41,6 +42,25 @@ const resolveSampleProjectUrls = () => {
   const cleanBasePath = basePath.replace(/\/+$/, '');
   urls.add(`${cleanBasePath}/sample-project.json`);
   return Array.from(urls);
+};
+
+const readJsonResponse = async <T,>(response: Response, context: string): Promise<T> => {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.toLowerCase().includes('application/json')) {
+    const bodyPreview = (await response.text()).slice(0, 120).replace(/\s+/g, ' ').trim();
+    throw new Error(
+      `${context} returned ${contentType || 'an unknown content type'} instead of JSON${
+        bodyPreview ? ` (${bodyPreview})` : ''
+      }`
+    );
+  }
+
+  try {
+    return (await response.json()) as T;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid JSON payload';
+    throw new Error(`${context} returned malformed JSON (${message})`);
+  }
 };
 
 export default function App() {
@@ -397,7 +417,7 @@ export default function App() {
         if (!response.ok) {
           throw new Error(`Project list failed: ${response.status}`);
         }
-        const projects = (await response.json()) as ProjectSummary[];
+        const projects = await readJsonResponse<ProjectSummary[]>(response, 'Project list request');
         if (projects.length === 0) {
           const seedUrls = resolveSampleProjectUrls();
           const seedFailures: string[] = [];
@@ -417,12 +437,26 @@ export default function App() {
               );
               continue;
             }
-            seedData = (await seedResponse.json()) as Project;
+            seedData = await readJsonResponse<Project>(seedResponse, 'Sample project request');
             break;
           }
 
           if (!seedData) {
-            throw new Error(`Seed request failed: ${seedFailures.join(' | ')}`);
+            const now = new Date().toISOString();
+            seedData = {
+              ...localSampleProject,
+              id: `project-local-${Date.now().toString(36)}`,
+              updatedAt: now,
+              pages: localSampleProject.pages.map((page) => ({
+                ...page,
+                nodes: page.nodes.map((node) => ({
+                  ...node
+                }))
+              }))
+            };
+            setProjectError(
+              `Sample JSON request failed (${seedFailures.join(' | ')}). Loaded built-in starter project instead.`
+            );
           }
 
           const createdResponse = await fetch('/projects', {
@@ -436,7 +470,10 @@ export default function App() {
           if (!createdResponse.ok) {
             throw new Error(`Project create failed: ${createdResponse.status}`);
           }
-          const createdProject = (await createdResponse.json()) as Project;
+          const createdProject = await readJsonResponse<Project>(
+            createdResponse,
+            'Project create request'
+          );
           setProject(createdProject);
           setProjectList([
             {
