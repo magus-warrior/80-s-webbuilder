@@ -133,39 +133,92 @@ const renderTextNode = (
   interactive: boolean,
   tokenMap: Record<string, string>,
   editableProps?: HTMLAttributes<HTMLParagraphElement>
-) => (
-  <p
-    style={resolveNodeStyles(node, tokenMap)}
-    className="text-sm text-inherit"
-    contentEditable={interactive}
-    suppressContentEditableWarning
-    {...editableProps}
-  >
-    {node.props?.content ?? node.name}
-  </p>
-);
+) => {
+  const href = node.props?.href?.trim();
+  const target = node.props?.target?.trim();
+  const rel = node.props?.rel?.trim();
+  const textElement = (
+    <p
+      style={resolveNodeStyles(node, tokenMap)}
+      className="text-sm text-inherit"
+      contentEditable={interactive}
+      suppressContentEditableWarning
+      {...editableProps}
+    >
+      {node.props?.content ?? node.name}
+    </p>
+  );
+
+  if (!href) {
+    return textElement;
+  }
+
+  return (
+    <a
+      href={href}
+      target={target || undefined}
+      rel={rel || undefined}
+      onClick={(event) => interactive && event.preventDefault()}
+      className="inline-block max-w-full align-top"
+    >
+      {textElement}
+    </a>
+  );
+};
 
 const renderButtonNode = (
   node: Node,
   interactive: boolean,
   tokenMap: Record<string, string>,
   editableProps?: HTMLAttributes<HTMLButtonElement>
-) => (
-  <button
-    type="button"
-    style={resolveNodeStyles(node, tokenMap)}
-    className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-inherit shadow-lg neon-glow-soft transition hover:brightness-110"
-    contentEditable={interactive}
-    suppressContentEditableWarning
-    {...editableProps}
-  >
-    {node.props?.label ?? node.name}
-  </button>
-);
+) => {
+  const href = node.props?.href?.trim();
+  const target = node.props?.target?.trim();
+  const rel = node.props?.rel?.trim();
+  const buttonClassName =
+    'rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-inherit shadow-lg neon-glow-soft transition hover:brightness-110';
 
-const renderImageNode = (node: Node, _interactive: boolean, tokenMap: Record<string, string>) => {
+  if (href) {
+    return (
+      <a
+        href={href}
+        target={target || undefined}
+        rel={rel || undefined}
+        style={resolveNodeStyles(node, tokenMap)}
+        className={`inline-flex ${buttonClassName}`}
+        onClick={(event) => interactive && event.preventDefault()}
+      >
+        <span
+          contentEditable={interactive}
+          suppressContentEditableWarning
+          {...editableProps}
+        >
+          {node.props?.label ?? node.name}
+        </span>
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      style={resolveNodeStyles(node, tokenMap)}
+      className={buttonClassName}
+      contentEditable={interactive}
+      suppressContentEditableWarning
+      {...editableProps}
+    >
+      {node.props?.label ?? node.name}
+    </button>
+  );
+};
+
+const renderImageNode = (node: Node, interactive: boolean, tokenMap: Record<string, string>) => {
   const src = node.props?.src;
   const alt = node.props?.alt ?? node.name;
+  const href = node.props?.href?.trim();
+  const target = node.props?.target?.trim();
+  const rel = node.props?.rel?.trim();
   const style = resolveNodeStyles(node, tokenMap);
 
   if (!src) {
@@ -179,13 +232,29 @@ const renderImageNode = (node: Node, _interactive: boolean, tokenMap: Record<str
     );
   }
 
-  return (
+  const imageElement = (
     <img
       src={src}
       alt={alt}
       style={style}
       className="h-auto w-full rounded-2xl border border-slate-800 object-cover shadow-lg shadow-slate-900/40"
     />
+  );
+
+  if (!href) {
+    return imageElement;
+  }
+
+  return (
+    <a
+      href={href}
+      target={target || undefined}
+      rel={rel || undefined}
+      className="inline-block max-w-full align-top"
+      onClick={(event) => interactive && event.preventDefault()}
+    >
+      {imageElement}
+    </a>
   );
 };
 

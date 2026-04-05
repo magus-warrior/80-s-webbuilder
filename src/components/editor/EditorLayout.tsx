@@ -223,6 +223,7 @@ export default function EditorLayout({
   }>({ state: 'idle' });
   const [inspectorSections, setInspectorSections] = useState({
     text: true,
+    link: true,
     style: true,
     layout: false,
     assets: false,
@@ -262,7 +263,13 @@ export default function EditorLayout({
   }, [activeProjectId, projects]);
   const textKey = selectedNode?.type === 'button' ? 'label' : 'content';
   const textValue = selectedNode?.props?.[textKey] ?? '';
+  const linkValue = selectedNode?.props?.href ?? '';
+  const opensInNewTab = selectedNode?.props?.target === '_blank';
   const isLayoutNode = selectedNode?.type === 'container' || selectedNode?.type === 'section';
+  const supportsLinks =
+    selectedNode?.type === 'text' ||
+    selectedNode?.type === 'button' ||
+    selectedNode?.type === 'image';
   const toggleInspectorSection = (section: keyof typeof inspectorSections) => {
     setInspectorSections((prev) => ({
       ...prev,
@@ -844,7 +851,7 @@ export default function EditorLayout({
                 {layerItems.length}
               </span>
             </div>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-1.5">
               {layerItems.length === 0 ? (
                 <p className="text-xs text-slate-400">No layers yet.</p>
               ) : (
@@ -865,7 +872,7 @@ export default function EditorLayout({
                       onDragStart={handleLayerDragStart(item)}
                       onDragOver={handleLayerDragOver(item)}
                       onDrop={handleLayerDrop(item)}
-                      className={`flex items-center gap-2 rounded-lg border px-2 py-2 text-left text-xs transition ${
+                      className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-xs transition ${
                         isSelected
                           ? 'border-cyan-300/70 bg-cyan-500/10 text-cyan-100'
                           : 'border-slate-900/80 bg-black/60 text-slate-300 hover:border-cyan-400/60'
@@ -875,25 +882,21 @@ export default function EditorLayout({
                       <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
                         {item.node.type}
                       </span>
-                      <input
-                        value={item.node.name}
-                        onChange={(event) => updateNodeName(item.node.id, event.target.value)}
-                        onClick={(event) => event.stopPropagation()}
-                        onFocus={() => setSelectedNodeId(item.node.id)}
-                        className="flex-1 rounded-md border border-slate-800/80 bg-slate-950/70 px-2 py-1 text-xs text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                      />
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          removeNode(item.node.id);
-                        }}
-                        onKeyDown={(event) => event.stopPropagation()}
-                        className="rounded-full border border-transparent px-2 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-slate-500 transition hover:border-rose-400/60 hover:text-rose-200"
-                        aria-label={`Delete ${item.node.name}`}
-                      >
-                        ✕
-                      </button>
+                      <span className="flex-1 truncate text-slate-100">{item.node.name}</span>
+                      {isSelected ? (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            removeNode(item.node.id);
+                          }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                          className="rounded-full border border-transparent px-2 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-slate-500 transition hover:border-rose-400/60 hover:text-rose-200"
+                          aria-label={`Delete ${item.node.name}`}
+                        >
+                          ✕
+                        </button>
+                      ) : null}
                     </div>
                   );
                 })
@@ -910,6 +913,20 @@ export default function EditorLayout({
           </div>
           {selectedNode ? (
             <div className="space-y-4 text-sm text-slate-200">
+              <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextName = window.prompt('Rename selected layer', selectedNode.name);
+                    if (nextName?.trim()) {
+                      updateNodeName(selectedNode.id, nextName.trim());
+                    }
+                  }}
+                  className="w-full rounded-lg border border-slate-800/90 bg-slate-950/70 px-3 py-2 text-left text-xs uppercase tracking-[0.18em] text-slate-300 transition hover:border-cyan-400/60 hover:text-slate-100"
+                >
+                  Rename layer
+                </button>
+              </div>
               {(selectedNode.type === 'text' || selectedNode.type === 'button') && (
                 <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
                   <button
@@ -944,6 +961,56 @@ export default function EditorLayout({
                   </div>
                 </div>
               )}
+              {supportsLinks ? (
+                <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleInspectorSection('link')}
+                    className="flex w-full items-center justify-between text-left"
+                    aria-expanded={inspectorSections.link}
+                  >
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Link</p>
+                    <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
+                      {inspectorSections.link ? 'Collapse' : 'Expand'}
+                    </span>
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
+                      inspectorSections.link ? 'max-h-[250px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <label className="mt-3 block">
+                      <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                        URL
+                      </span>
+                      <input
+                        value={linkValue}
+                        onChange={(event) =>
+                          updateNodeProps(selectedNode.id, {
+                            href: event.target.value
+                          })
+                        }
+                        placeholder="https://example.com"
+                        className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                      />
+                    </label>
+                    <label className="mt-3 flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-slate-400">
+                      <input
+                        type="checkbox"
+                        checked={opensInNewTab}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                          updateNodeProps(selectedNode.id, {
+                            target: event.target.checked ? '_blank' : '',
+                            rel: event.target.checked ? 'noopener noreferrer' : ''
+                          })
+                        }
+                        className="h-4 w-4 rounded border-slate-600 bg-slate-950/80 text-cyan-400 focus:ring-cyan-400"
+                      />
+                      Open in new tab
+                    </label>
+                  </div>
+                </div>
+              ) : null}
               <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
                 <button
                   type="button"
