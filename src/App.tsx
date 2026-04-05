@@ -129,9 +129,9 @@ export default function App() {
     return !(nodesMatch && tokensMatch);
   };
 
-  const persistProject = async (nextProject: Project) => {
+  const persistProject = async (nextProject: Project): Promise<boolean> => {
     if (!activeProjectId) {
-      return;
+      return false;
     }
     const requestId = ++saveRequestId.current;
     setIsSaving(true);
@@ -150,7 +150,7 @@ export default function App() {
           setProjectError('Session expired. Please sign in again.')
         )
       ) {
-        return;
+        return false;
       }
       if (!response.ok) {
         throw new Error(`Save failed: ${response.status}`);
@@ -185,11 +185,39 @@ export default function App() {
           : savedProject;
         setProject(mergedProject);
       }
+      return true;
     } catch (error) {
       setProjectError(error instanceof Error ? error.message : 'Unknown error');
+      return false;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const flushPendingProjectSave = async (): Promise<boolean> => {
+    const baseProject = latestProject.current;
+    if (!baseProject) {
+      return true;
+    }
+    if (saveTimeout.current) {
+      window.clearTimeout(saveTimeout.current);
+      saveTimeout.current = null;
+    }
+    const currentNodes = useEditorStore.getState().nodes;
+    const currentPageId = useEditorStore.getState().currentPageId;
+    const resolvedPageId = currentPageId ?? baseProject.pages[0]?.id ?? null;
+    if (!hasProjectChanges(baseProject, currentNodes, themeTokens, resolvedPageId)) {
+      return true;
+    }
+    const nextProject = buildUpdatedProject(
+      baseProject,
+      currentNodes,
+      themeTokens,
+      resolvedPageId
+    );
+    setProject(nextProject);
+    latestProject.current = nextProject;
+    return persistProject(nextProject);
   };
 
   const applyProjectUpdate = (updatedProject: Project) => {
@@ -247,6 +275,10 @@ export default function App() {
     setIsPublishing(true);
     setProjectError(null);
     try {
+      const didSaveSucceed = await flushPendingProjectSave();
+      if (!didSaveSucceed) {
+        throw new Error('Unable to publish because the latest edits could not be saved.');
+      }
       const payload: Record<string, unknown> = { isPublished: nextPublished };
       if (publicSlugDraft.trim()) {
         payload.publicSlug = publicSlugDraft.trim();
@@ -970,11 +1002,12 @@ export default function App() {
     return <AuthScreen />;
   }
 
-  const isPublishDisabled =
+  const isPublishActionBlocked =
     !project ||
     isPublishing ||
     publicSlugStatus.state === 'unavailable' ||
     publicSlugStatus.state === 'error';
+  const isUnpublishDisabled = !project || isPublishing;
 
   return (
     <ThemeProvider tokens={themeTokens} onTokensChange={setThemeTokens}>
@@ -1087,9 +1120,15 @@ export default function App() {
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-900/80 bg-black/60 px-6 py-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Publishing</p>
-                <p className="mt-2 text-sm text-slate-200">
-                  {project?.isPublished ? 'Published' : 'Draft'}
-                </p>
+                <div className="mt-2 flex items-center gap-2 text-sm text-slate-200">
+                  <span aria-hidden>{project?.isPublished ? '🟢' : '⚪'}</span>
+                  <p>{project?.isPublished ? 'Published' : 'Draft (Unpublished)'}</p>
+                </div>
+                {project?.isPublished && project.publishedAt ? (
+                  <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-400">
+                    Live since {new Date(project.publishedAt).toLocaleString()}
+                  </p>
+                ) : null}
                 <label className="mt-4 block text-xs uppercase tracking-[0.2em] text-slate-400">
                   Public slug
                   <input
@@ -1132,18 +1171,38 @@ export default function App() {
                   </a>
                 ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => handlePublishToggle(!project?.isPublished)}
-                disabled={isPublishDisabled}
-                className="rounded-full border-neon-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-200 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isPublishing
-                  ? 'Updating...'
-                  : project?.isPublished
-                    ? 'Unpublish'
-                    : 'Publish'}
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                {project?.isPublished ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handlePublishToggle(true)}
+                      disabled={isPublishActionBlocked}
+                      className="rounded-full border-neon-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-200 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                      title="Update live site with your latest edits"
+                    >
+                      {isPublishing ? 'Updating...' : '⟳ Update'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePublishToggle(false)}
+                      disabled={isUnpublishDisabled}
+                      className="rounded-full border border-rose-400/50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-rose-100 transition hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isPublishing ? 'Updating...' : 'Unpublish'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handlePublishToggle(true)}
+                    disabled={isPublishActionBlocked}
+                    className="rounded-full border-neon-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-200 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isPublishing ? 'Updating...' : '⬆ Publish'}
+                  </button>
+                )}
+              </div>
             </div>
             {project ? (
               <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
