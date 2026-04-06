@@ -123,6 +123,13 @@ const resolveNodeStyles = (
     const handler = stylePropHandlers[key];
     if (handler && typeof value === 'string') {
       const resolvedValue = resolveTokenValue(value, tokenMap);
+      if (
+        disableVisualStyles &&
+        visualStyleProps.has(key) &&
+        !resolvedValue.trim().startsWith('var(--theme-')
+      ) {
+        return;
+      }
       handler(resolvedValue, style);
     }
   });
