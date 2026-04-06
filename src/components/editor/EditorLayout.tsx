@@ -86,6 +86,26 @@ const minimalStyleFields = styleFields.filter((field) =>
   minimalStyleFieldKeys.has(field.key)
 );
 
+const getStyleFieldValue = (node: Node | null, key: string): string => {
+  if (!node?.props) {
+    return '';
+  }
+  if (key === 'background') {
+    return node.props.background ?? node.props.backgroundColor ?? '';
+  }
+  return node.props[key] ?? '';
+};
+
+const buildStyleFieldUpdate = (key: string, value: string): Record<string, string> => {
+  if (key === 'background') {
+    return {
+      background: value,
+      backgroundColor: value
+    };
+  }
+  return { [key]: value };
+};
+
 const styleSelectFields = [
   {
     label: 'Font weight',
@@ -166,6 +186,7 @@ const containerLayoutFields = [{ label: 'Gap', key: 'gap', placeholder: '12px' }
 
 const resetStyleKeys = [
   ...styleFields.map((field) => field.key),
+  'backgroundColor',
   ...styleSelectFields.map((field) => field.key),
   ...containerStyleFields.map((field) => field.key),
   ...layoutFields.map((field) => field.key),
@@ -1100,11 +1121,12 @@ export default function EditorLayout({
                         {colorFieldKeys.has(field.key) ? (
                           <ColorControl
                             label={field.label}
-                            value={selectedNode.props?.[field.key] ?? ''}
+                            value={getStyleFieldValue(selectedNode, field.key)}
                             onChange={(nextValue) =>
-                              updateNodeProps(selectedNode.id, {
-                                [field.key]: nextValue
-                              })
+                              updateNodeProps(
+                                selectedNode.id,
+                                buildStyleFieldUpdate(field.key, nextValue)
+                              )
                             }
                           />
                         ) : (
@@ -1113,11 +1135,12 @@ export default function EditorLayout({
                               {field.label}
                             </span>
                             <input
-                              value={selectedNode.props?.[field.key] ?? ''}
+                              value={getStyleFieldValue(selectedNode, field.key)}
                               onChange={(event) =>
-                                updateNodeProps(selectedNode.id, {
-                                  [field.key]: event.target.value
-                                })
+                                updateNodeProps(
+                                  selectedNode.id,
+                                  buildStyleFieldUpdate(field.key, event.target.value)
+                                )
                               }
                               placeholder={field.placeholder}
                               className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
