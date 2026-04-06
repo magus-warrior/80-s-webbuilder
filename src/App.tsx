@@ -1324,6 +1324,8 @@ export default function App() {
                     title="Rendered Preview"
                     subtitle={previewPage ? `${previewPage.title} nodes` : 'No page selected'}
                     nodes={previewNodes}
+                    titleStyle={{ color: 'var(--theme-text-primary, #ffffff)' }}
+                    subtitleStyle={{ color: 'var(--theme-text-muted, #94a3b8)' }}
                   />
                 </div>
                 <div className="space-y-4">

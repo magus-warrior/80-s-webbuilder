@@ -73,6 +73,8 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
               nodes={nodes}
               badgeLabel="View Only"
               emptyStateLabel="No nodes are available for this published page."
+              titleStyle={{ color: 'var(--theme-text-primary, #ffffff)' }}
+              subtitleStyle={{ color: 'var(--theme-text-muted, #94a3b8)' }}
             />
           </section>
         )}
