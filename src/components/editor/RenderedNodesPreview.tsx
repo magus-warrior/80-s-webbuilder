@@ -1,6 +1,7 @@
 import NodeRenderer from './NodeRenderer';
 
 import type { Node } from '../../models';
+import type { CSSProperties } from 'react';
 
 type RenderedNodesPreviewProps = {
   title: string;
@@ -9,6 +10,8 @@ type RenderedNodesPreviewProps = {
   badgeLabel?: string;
   emptyStateLabel?: string;
   disableVisualStyles?: boolean;
+  titleStyle?: CSSProperties;
+  subtitleStyle?: CSSProperties;
 };
 
 export default function RenderedNodesPreview({
@@ -17,14 +20,27 @@ export default function RenderedNodesPreview({
   nodes,
   badgeLabel = 'Renderer',
   emptyStateLabel = 'No nodes are available for this page.',
-  disableVisualStyles = false
+  disableVisualStyles = false,
+  titleStyle,
+  subtitleStyle
 }: RenderedNodesPreviewProps) {
+  const defaultTitleStyle: CSSProperties = {
+    color: 'var(--theme-text-primary, #ffffff)'
+  };
+  const defaultSubtitleStyle: CSSProperties = {
+    color: 'var(--theme-text-muted, #94a3b8)'
+  };
+
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-white">{title}</p>
-          <p className="text-xs text-slate-400">{subtitle}</p>
+          <p className="text-sm font-semibold" style={{ ...defaultTitleStyle, ...titleStyle }}>
+            {title}
+          </p>
+          <p className="text-xs" style={{ ...defaultSubtitleStyle, ...subtitleStyle }}>
+            {subtitle}
+          </p>
         </div>
         <span className="rounded-full border border-slate-700/80 bg-black/60 px-3 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-slate-400">
           {badgeLabel}
