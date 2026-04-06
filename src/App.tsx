@@ -424,21 +424,28 @@ export default function App() {
           let seedData: Project | null = null;
 
           for (const url of seedUrls) {
-            const seedResponse = await fetch(url);
-            if (!seedResponse.ok) {
-              seedFailures.push(`${url} -> ${seedResponse.status}`);
-              continue;
+            try {
+              const seedResponse = await fetch(url, {
+                headers: { Accept: 'application/json' }
+              });
+              if (!seedResponse.ok) {
+                seedFailures.push(`${url} -> ${seedResponse.status}`);
+                continue;
+              }
+              const seedContentType = seedResponse.headers.get('content-type') ?? '';
+              if (!seedContentType.toLowerCase().includes('application/json')) {
+                const seedBody = await seedResponse.text();
+                seedFailures.push(
+                  `${url} -> ${seedContentType || 'unknown content type'} (${seedBody.slice(0, 80)})`
+                );
+                continue;
+              }
+              seedData = await readJsonResponse<Project>(seedResponse, 'Sample project request');
+              break;
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Unknown error';
+              seedFailures.push(`${url} -> ${message}`);
             }
-            const seedContentType = seedResponse.headers.get('content-type');
-            if (!seedContentType?.includes('application/json')) {
-              const seedBody = await seedResponse.text();
-              seedFailures.push(
-                `${url} -> ${seedContentType ?? 'unknown content type'} (${seedBody.slice(0, 80)})`
-              );
-              continue;
-            }
-            seedData = await readJsonResponse<Project>(seedResponse, 'Sample project request');
-            break;
           }
 
           if (!seedData) {
