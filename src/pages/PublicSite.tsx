@@ -73,7 +73,6 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
               nodes={nodes}
               badgeLabel="View Only"
               emptyStateLabel="No nodes are available for this published page."
-              disableVisualStyles
             />
           </section>
         )}
