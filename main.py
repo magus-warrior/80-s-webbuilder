@@ -7,7 +7,7 @@ import shutil
 import uuid
 from typing import Any, Iterable
 
-from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -31,12 +31,24 @@ MAX_PROJECT_DESCRIPTION_LENGTH = 280
 app.include_router(auth_router)
 
 
+def no_cache_headers() -> dict[str, str]:
+    return {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    }
+
+
+def serve_index_file() -> FileResponse:
+    return FileResponse(INDEX_FILE, headers=no_cache_headers())
+
+
 @app.middleware("http")
 async def spa_refresh_fallback(request: Request, call_next):
     if request.method == "GET" and request.url.path.startswith("/projects/"):
         accept = request.headers.get("accept", "")
         if "text/html" in accept and "application/json" not in accept and INDEX_FILE.exists():
-            return FileResponse(INDEX_FILE)
+            return serve_index_file()
     return await call_next(request)
 
 
@@ -54,7 +66,7 @@ def health() -> dict:
 @app.get("/", response_model=None)
 def root() -> dict | FileResponse:
     if INDEX_FILE.exists():
-        return FileResponse(INDEX_FILE)
+        return serve_index_file()
     return {"status": "ok"}
 
 
@@ -641,7 +653,9 @@ def validate_project_name_endpoint(
 
 
 @app.get("/api/public/{slug}")
-def get_public_project(slug: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+def get_public_project(
+    slug: str, response: Response, db: Session = Depends(get_db)
+) -> dict[str, Any]:
     project = (
         db.query(Project)
         .filter(Project.public_slug == slug, Project.is_published.is_(True))
@@ -649,6 +663,7 @@ def get_public_project(slug: str, db: Session = Depends(get_db)) -> dict[str, An
     )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    response.headers.update(no_cache_headers())
     return serialize_project(project)
 
 
@@ -666,7 +681,7 @@ def get_sample_project() -> FileResponse:
 @app.get("/public/{path:path}", response_model=None)
 def public_site(path: str) -> FileResponse:
     if INDEX_FILE.exists():
-        return FileResponse(INDEX_FILE)
+        return serve_index_file()
     raise HTTPException(status_code=404, detail="Public site not available")
 
 
@@ -675,7 +690,7 @@ def public_slug_site(slug: str) -> FileResponse:
     if is_reserved_public_slug(slug):
         raise HTTPException(status_code=404, detail="Public site not available")
     if INDEX_FILE.exists():
-        return FileResponse(INDEX_FILE)
+        return serve_index_file()
     raise HTTPException(status_code=404, detail="Public site not available")
 
 

@@ -17,6 +17,7 @@ import { useTheme } from './ThemeProvider';
 type NodeRendererProps = {
   node: Node;
   interactive?: boolean;
+  disableVisualStyles?: boolean;
 };
 
 const stylePropHandlers: Record<
@@ -98,11 +99,27 @@ const resolveTokenValue = (value: string, tokenMap: Record<string, string>) => {
   return tokenMap[normalized] ?? value;
 };
 
-const resolveNodeStyles = (node: Node, tokenMap: Record<string, string>): CSSProperties => {
+const visualStyleProps = new Set([
+  'color',
+  'background',
+  'backgroundColor',
+  'fontSize',
+  'fontWeight',
+  'textAlign'
+]);
+
+const resolveNodeStyles = (
+  node: Node,
+  tokenMap: Record<string, string>,
+  disableVisualStyles = false
+): CSSProperties => {
   const style: CSSProperties = {};
   const props = node.props ?? {};
 
   Object.entries(props).forEach(([key, value]) => {
+    if (disableVisualStyles && visualStyleProps.has(key)) {
+      return;
+    }
     const handler = stylePropHandlers[key];
     if (handler && typeof value === 'string') {
       const resolvedValue = resolveTokenValue(value, tokenMap);
@@ -123,15 +140,25 @@ const resolveNodeStyles = (node: Node, tokenMap: Record<string, string>): CSSPro
   return style;
 };
 
-const renderChildren = (node: Node, interactive: boolean) =>
+const renderChildren = (
+  node: Node,
+  interactive: boolean,
+  disableVisualStyles: boolean
+) =>
   node.children?.map((child) => (
-    <NodeRenderer key={child.id} node={child} interactive={interactive} />
+    <NodeRenderer
+      key={child.id}
+      node={child}
+      interactive={interactive}
+      disableVisualStyles={disableVisualStyles}
+    />
   )) ?? null;
 
 const renderTextNode = (
   node: Node,
   interactive: boolean,
   tokenMap: Record<string, string>,
+  disableVisualStyles: boolean,
   editableProps?: HTMLAttributes<HTMLParagraphElement>
 ) => {
   const href = node.props?.href?.trim();
@@ -139,7 +166,7 @@ const renderTextNode = (
   const rel = node.props?.rel?.trim();
   const textElement = (
     <p
-      style={resolveNodeStyles(node, tokenMap)}
+      style={resolveNodeStyles(node, tokenMap, disableVisualStyles)}
       className="text-sm text-inherit"
       contentEditable={interactive}
       suppressContentEditableWarning
@@ -170,6 +197,7 @@ const renderButtonNode = (
   node: Node,
   interactive: boolean,
   tokenMap: Record<string, string>,
+  disableVisualStyles: boolean,
   editableProps?: HTMLAttributes<HTMLButtonElement>
 ) => {
   const href = node.props?.href?.trim();
@@ -184,7 +212,7 @@ const renderButtonNode = (
         href={href}
         target={target || undefined}
         rel={rel || undefined}
-        style={resolveNodeStyles(node, tokenMap)}
+        style={resolveNodeStyles(node, tokenMap, disableVisualStyles)}
         className={`inline-flex ${buttonClassName}`}
         onClick={(event) => interactive && event.preventDefault()}
       >
@@ -202,7 +230,7 @@ const renderButtonNode = (
   return (
     <button
       type="button"
-      style={resolveNodeStyles(node, tokenMap)}
+      style={resolveNodeStyles(node, tokenMap, disableVisualStyles)}
       className={buttonClassName}
       contentEditable={interactive}
       suppressContentEditableWarning
@@ -213,13 +241,18 @@ const renderButtonNode = (
   );
 };
 
-const renderImageNode = (node: Node, interactive: boolean, tokenMap: Record<string, string>) => {
+const renderImageNode = (
+  node: Node,
+  interactive: boolean,
+  tokenMap: Record<string, string>,
+  disableVisualStyles: boolean
+) => {
   const src = node.props?.src;
   const alt = node.props?.alt ?? node.name;
   const href = node.props?.href?.trim();
   const target = node.props?.target?.trim();
   const rel = node.props?.rel?.trim();
-  const style = resolveNodeStyles(node, tokenMap);
+  const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
 
   if (!src) {
     return (
@@ -261,16 +294,17 @@ const renderImageNode = (node: Node, interactive: boolean, tokenMap: Record<stri
 const renderContainerNode = (
   node: Node,
   interactive: boolean,
-  tokenMap: Record<string, string>
+  tokenMap: Record<string, string>,
+  disableVisualStyles: boolean
 ) => {
-  const style = resolveNodeStyles(node, tokenMap);
+  const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
   const hasBackground = Boolean(style.background || style.backgroundColor);
   return (
     <div
       style={style}
       className={`rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`}
     >
-      {renderChildren(node, interactive)}
+      {renderChildren(node, interactive, disableVisualStyles)}
     </div>
   );
 };
@@ -282,6 +316,7 @@ const nodeRenderers: Partial<
       node: Node,
       interactive: boolean,
       tokenMap: Record<string, string>,
+      disableVisualStyles: boolean,
       editableProps?: HTMLAttributes<HTMLElement>
     ) => JSX.Element
   >
@@ -302,7 +337,11 @@ const parseLength = (value?: string) => {
 
 const toPx = (value: number) => `${Math.round(value)}px`;
 
-export default function NodeRenderer({ node, interactive = true }: NodeRendererProps) {
+export default function NodeRenderer({
+  node,
+  interactive = true,
+  disableVisualStyles = false
+}: NodeRendererProps) {
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
@@ -540,7 +579,7 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
             : 'relative rounded-2xl'
         }
       >
-        {renderer(node, interactive, tokenMap, editableProps)}
+        {renderer(node, interactive, tokenMap, disableVisualStyles, editableProps)}
         {resizeHandles}
       </div>
     );
@@ -557,11 +596,11 @@ export default function NodeRenderer({ node, interactive = true }: NodeRendererP
             }`
           : 'relative rounded-2xl border border-slate-900/80 bg-black/40 p-4'
       }
-      style={{ ...resolveNodeStyles(node, tokenMap), ...positionStyle }}
+      style={{ ...resolveNodeStyles(node, tokenMap, disableVisualStyles), ...positionStyle }}
     >
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{node.type}</div>
       <p className="mt-2 text-sm text-slate-200">{node.name}</p>
-      {renderChildren(node, interactive)}
+      {renderChildren(node, interactive, disableVisualStyles)}
       {resizeHandles}
     </div>
   );

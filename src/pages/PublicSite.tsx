@@ -73,6 +73,7 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
               nodes={nodes}
               badgeLabel="View Only"
               emptyStateLabel="No nodes are available for this published page."
+              disableVisualStyles
             />
           </section>
         )}
@@ -102,7 +103,12 @@ export default function PublicSite() {
       setError(null);
       try {
         const response = await fetch(`/api/public/${slug}`, {
-          signal: controller.signal
+          signal: controller.signal,
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache'
+          }
         });
         if (!response.ok) {
           throw new Error(`Public project request failed: ${response.status}`);

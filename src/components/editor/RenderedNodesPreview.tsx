@@ -8,6 +8,7 @@ type RenderedNodesPreviewProps = {
   nodes: Node[];
   badgeLabel?: string;
   emptyStateLabel?: string;
+  disableVisualStyles?: boolean;
 };
 
 export default function RenderedNodesPreview({
@@ -15,7 +16,8 @@ export default function RenderedNodesPreview({
   subtitle,
   nodes,
   badgeLabel = 'Renderer',
-  emptyStateLabel = 'No nodes are available for this page.'
+  emptyStateLabel = 'No nodes are available for this page.',
+  disableVisualStyles = false
 }: RenderedNodesPreviewProps) {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
@@ -30,7 +32,14 @@ export default function RenderedNodesPreview({
       </div>
       <div className="mt-4 space-y-3">
         {nodes.length > 0 ? (
-          nodes.map((node) => <NodeRenderer key={node.id} node={node} interactive={false} />)
+          nodes.map((node) => (
+            <NodeRenderer
+              key={node.id}
+              node={node}
+              interactive={false}
+              disableVisualStyles={disableVisualStyles}
+            />
+          ))
         ) : (
           <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-6 text-sm text-slate-400">
             {emptyStateLabel}
