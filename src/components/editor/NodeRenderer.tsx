@@ -330,6 +330,24 @@ const renderContainerNode = (
   );
 };
 
+const renderSectionNode = (
+  node: Node,
+  interactive: boolean,
+  tokenMap: Record<string, string>,
+  disableVisualStyles: boolean
+) => {
+  const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
+  const hasBackground = Boolean(style.background || style.backgroundColor);
+  return (
+    <section
+      style={style}
+      className={`rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`}
+    >
+      {renderChildren(node, interactive, disableVisualStyles)}
+    </section>
+  );
+};
+
 const nodeRenderers: Partial<
   Record<
     Node['type'],
@@ -345,7 +363,8 @@ const nodeRenderers: Partial<
   text: renderTextNode,
   button: renderButtonNode,
   image: renderImageNode,
-  container: renderContainerNode
+  container: renderContainerNode,
+  section: renderSectionNode
 };
 
 const parseLength = (value?: string) => {
