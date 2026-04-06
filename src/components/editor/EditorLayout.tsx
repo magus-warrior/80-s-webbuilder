@@ -71,6 +71,29 @@ const buildLayerItems = (
     ...(node.children ? buildLayerItems(node.children, depth + 1, node.id) : [])
   ]);
 
+const layerTypeBadgeMap: Record<string, { label: string; icon?: string }> = {
+  section: { label: 'Section', icon: '▦' },
+  container: { label: 'Container', icon: '▣' },
+  text: { label: 'Text', icon: 'T' },
+  heading: { label: 'Heading', icon: 'H' },
+  button: { label: 'Button', icon: '◉' },
+  image: { label: 'Image', icon: '◩' },
+  link: { label: 'Link', icon: '↗' },
+  list: { label: 'List', icon: '≡' },
+  input: { label: 'Input', icon: '⌨' },
+  form: { label: 'Form', icon: '☰' }
+};
+
+const getLayerTypeBadge = (type: string): { label: string; icon?: string } => {
+  if (layerTypeBadgeMap[type]) {
+    return layerTypeBadgeMap[type];
+  }
+
+  return {
+    label: type.charAt(0).toUpperCase() + type.slice(1)
+  };
+};
+
 const styleFields = [
   { label: 'Text color', key: 'color', placeholder: '#f8fafc' },
   { label: 'Background', key: 'background', placeholder: '#0f172a' },
@@ -930,6 +953,7 @@ export default function EditorLayout({
               ) : (
                 layerItems.map((item) => {
                   const isSelected = selectedNodeId === item.node.id;
+                  const typeBadge = getLayerTypeBadge(item.node.type);
                   return (
                     <div
                       key={item.node.id}
@@ -953,7 +977,8 @@ export default function EditorLayout({
                       style={{ paddingLeft: `${8 + item.depth * 12}px` }}
                     >
                       <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
-                        {item.node.type}
+                        {typeBadge.icon ? `${typeBadge.icon} ` : ''}
+                        {typeBadge.label}
                       </span>
                       <span className="flex-1 truncate text-slate-100">{item.node.name}</span>
                       {isSelected ? (
