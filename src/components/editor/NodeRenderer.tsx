@@ -22,7 +22,7 @@ type NodeRendererProps = {
 
 const stylePropHandlers: Record<
   string,
-  (value: string, style: CSSProperties) => void
+  (value: string | number, style: CSSProperties) => void
 > = {
   color: (value, style) => {
     style.color = value;
@@ -115,27 +115,41 @@ const resolveNodeStyles = (
 ): CSSProperties => {
   const style: CSSProperties = {};
   const props = node.props ?? {};
+  const toCamelCase = (key: string) =>
+    key.replace(/[-_]+([a-z])/gi, (_, letter: string) => letter.toUpperCase());
 
   Object.entries(props).forEach(([key, value]) => {
-    if (disableVisualStyles && visualStyleProps.has(key)) {
+    if (typeof value !== 'string' && typeof value !== 'number') {
       return;
     }
-    const handler = stylePropHandlers[key];
-    if (handler && typeof value === 'string') {
-      const resolvedValue = resolveTokenValue(value, tokenMap);
+    const normalizedKey = toCamelCase(key);
+    if (disableVisualStyles && visualStyleProps.has(normalizedKey)) {
+      return;
+    }
+    const handler = stylePropHandlers[normalizedKey];
+    if (handler) {
+      const resolvedValue =
+        typeof value === 'string' ? resolveTokenValue(value, tokenMap) : value;
       if (
         disableVisualStyles &&
-        visualStyleProps.has(key) &&
+        visualStyleProps.has(normalizedKey) &&
+        typeof resolvedValue === 'string' &&
         !resolvedValue.trim().startsWith('var(--theme-')
       ) {
         return;
       }
       handler(resolvedValue, style);
+      return;
     }
+
+    const fallbackValue =
+      typeof value === 'string' ? resolveTokenValue(value, tokenMap) : value;
+    (style as Record<string, string | number>)[normalizedKey] = fallbackValue;
   });
 
-  if (node.type === 'container' && props.columns) {
-    const columnCount = Number.parseInt(props.columns, 10);
+  const columnValue = props.columns;
+  if (node.type === 'container' && (typeof columnValue === 'string' || typeof columnValue === 'number')) {
+    const columnCount = Number.parseInt(String(columnValue), 10);
     if (!Number.isNaN(columnCount) && columnCount > 0) {
       style.display = style.display ?? 'grid';
       style.gridTemplateColumns =
