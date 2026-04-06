@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import RenderedNodesPreview from '../components/editor/RenderedNodesPreview';
+import NodeRenderer from '../components/editor/NodeRenderer';
 import { ThemeProvider, useTheme } from '../components/editor/ThemeProvider';
 import type { Project } from '../models';
 
@@ -31,14 +31,14 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-10 px-6 py-12">
         <header className="rounded-3xl border-neon bg-slate-950/80 p-8 shadow-xl neon-glow-soft">
           <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">
-            Public Showcase
+            Live Site
           </p>
           <h1 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">
             {project?.name ?? 'Loading public site'}
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-slate-300">
             {project?.description ??
-              'This published layout is powered by your saved nodes and theme tokens.'}
+              'This is the published version of your page.'}
           </p>
           {project?.id ? (
             <div className="mt-6">
@@ -59,23 +59,23 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
 
         {isLoading ? (
           <section className="rounded-2xl border border-slate-900/80 bg-black/60 p-6 text-sm text-slate-300">
-            Loading published content...
+            Loading site...
           </section>
         ) : error ? (
           <section className="rounded-2xl border border-rose-500/40 bg-rose-950/40 p-6 text-sm text-rose-200">
-            {error}
+            We couldn&apos;t load this page right now.
           </section>
         ) : (
           <section className="rounded-2xl border border-slate-900/80 bg-black/60 p-6 shadow-lg shadow-black/60">
-            <RenderedNodesPreview
-              title={page?.title ?? 'Untitled Page'}
-              subtitle={`${nodes.length} nodes published`}
-              nodes={nodes}
-              badgeLabel="View Only"
-              emptyStateLabel="No nodes are available for this published page."
-              titleStyle={{ color: 'var(--theme-text-primary, #ffffff)' }}
-              subtitleStyle={{ color: 'var(--theme-text-muted, #94a3b8)' }}
-            />
+            {nodes.length ? (
+              <div className="space-y-4">
+                {nodes.map((node) => (
+                  <NodeRenderer key={node.id} node={node} interactive={false} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-300">This page has no published content yet.</p>
+            )}
           </section>
         )}
       </div>
