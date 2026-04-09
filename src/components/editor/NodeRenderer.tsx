@@ -319,10 +319,18 @@ const renderContainerNode = (
   disableVisualStyles: boolean
 ) => {
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
+  const hasExplicitWidth = Object.entries(node.props ?? {}).some(([key, value]) => {
+    if (typeof value !== 'string' && typeof value !== 'number') {
+      return false;
+    }
+    return key.replace(/[-_]+([a-z])/gi, (_, letter: string) => letter.toUpperCase()) === 'width';
+  });
   const hasBackground = Boolean(style.background || style.backgroundColor);
   const className = interactive
     ? `rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`
-    : undefined;
+    : hasExplicitWidth
+      ? undefined
+      : 'w-full';
   return (
     <div style={style} className={className}>
       {renderChildren(node, interactive, disableVisualStyles)}
@@ -337,10 +345,18 @@ const renderSectionNode = (
   disableVisualStyles: boolean
 ) => {
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
+  const hasExplicitWidth = Object.entries(node.props ?? {}).some(([key, value]) => {
+    if (typeof value !== 'string' && typeof value !== 'number') {
+      return false;
+    }
+    return key.replace(/[-_]+([a-z])/gi, (_, letter: string) => letter.toUpperCase()) === 'width';
+  });
   const hasBackground = Boolean(style.background || style.backgroundColor);
   const className = interactive
     ? `rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`
-    : undefined;
+    : hasExplicitWidth
+      ? undefined
+      : 'w-full';
   return (
     <section style={style} className={className}>
       {renderChildren(node, interactive, disableVisualStyles)}
