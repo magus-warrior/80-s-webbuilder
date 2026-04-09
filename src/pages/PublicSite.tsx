@@ -35,7 +35,7 @@ function PublicSiteShell({
       style={cssVariables}
       className="min-h-screen bg-gradient-to-br from-black via-slate-950 to-slate-900 text-slate-100"
     >
-      <div className="w-full px-5 py-8 sm:px-6 sm:py-12">
+      <div className="w-full px-3 py-6 sm:px-6 sm:py-12">
         <div className="mx-auto flex min-h-screen w-full max-w-[96rem] flex-col gap-8 sm:gap-10">
           <header className="rounded-3xl border-neon bg-slate-950/80 p-6 shadow-xl neon-glow-soft sm:p-8">
           {isSignedIn ? (
@@ -43,7 +43,7 @@ function PublicSiteShell({
               Live Site
             </p>
           ) : null}
-          <h1 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">
+          <h1 className="mt-4 break-words text-2xl font-semibold text-white sm:text-4xl">
             {project?.name ?? 'Loading public site'}
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-slate-300">
@@ -76,9 +76,9 @@ function PublicSiteShell({
               We couldn&apos;t load this page right now.
             </section>
           ) : (
-            <section className="w-full rounded-3xl border border-slate-900/80 bg-black/60 p-4 shadow-lg shadow-black/60 sm:p-6">
+            <section className="w-full overflow-hidden rounded-3xl border border-slate-900/80 bg-black/60 p-3 shadow-lg shadow-black/60 sm:p-6">
               {nodes.length ? (
-                <div className="mx-auto w-full max-w-[96rem] space-y-4 [&_p]:max-w-[70ch] [&_h1]:max-w-[22ch] [&_h2]:max-w-[26ch] [&_h3]:max-w-[30ch] [&_li]:max-w-[70ch]">
+                <div className="mx-auto w-full max-w-[96rem] space-y-4 [&_*]:min-w-0 [&_a]:break-words [&_h1]:max-w-[22ch] [&_h2]:max-w-[26ch] [&_h3]:max-w-[30ch] [&_li]:max-w-[70ch] [&_p]:max-w-[70ch]">
                   {nodes.map((node) => (
                     <NodeRenderer key={node.id} node={node} interactive={false} />
                   ))}

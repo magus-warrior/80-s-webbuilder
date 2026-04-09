@@ -225,7 +225,7 @@ const renderButtonNode = (
   const target = node.props?.target?.trim();
   const rel = node.props?.rel?.trim();
   const buttonClassName =
-    'rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-inherit shadow-lg neon-glow-soft transition hover:brightness-110';
+    'max-w-full break-words rounded-full bg-neon-gradient px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-inherit shadow-lg neon-glow-soft transition hover:brightness-110';
 
   if (href) {
     return (
@@ -291,7 +291,7 @@ const renderImageNode = (
       src={src}
       alt={alt}
       style={style}
-      className="h-auto w-full rounded-2xl border border-slate-800 object-cover shadow-lg shadow-slate-900/40"
+      className="h-auto w-full max-w-full rounded-2xl border border-slate-800 object-cover shadow-lg shadow-slate-900/40"
     />
   );
 
@@ -329,8 +329,8 @@ const renderContainerNode = (
   const className = interactive
     ? `rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`
     : hasExplicitWidth
-      ? undefined
-      : 'w-full';
+      ? 'max-w-full'
+      : 'w-full max-w-full';
   return (
     <div style={style} className={className}>
       {renderChildren(node, interactive, disableVisualStyles)}
@@ -355,8 +355,8 @@ const renderSectionNode = (
   const className = interactive
     ? `rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`
     : hasExplicitWidth
-      ? undefined
-      : 'w-full';
+      ? 'max-w-full'
+      : 'w-full max-w-full';
   return (
     <section style={style} className={className}>
       {renderChildren(node, interactive, disableVisualStyles)}
@@ -461,9 +461,12 @@ export default function NodeRenderer({
     if (height) {
       style.height = height;
     }
+    if (!interactive) {
+      style.maxWidth = '100%';
+    }
 
     return style;
-  }, [x, y, width, height]);
+  }, [height, interactive, width, x, y]);
 
   useEffect(() => {
     positionRef.current = { x, y };
@@ -632,7 +635,7 @@ export default function NodeRenderer({
             ? `relative cursor-pointer rounded-2xl transition-shadow ${
                 isSelected ? 'neon-ring' : 'neon-ring-hover'
               }`
-            : 'relative rounded-2xl'
+            : 'relative max-w-full rounded-2xl'
         }
       >
         {renderer(node, interactive, tokenMap, disableVisualStyles, editableProps)}
