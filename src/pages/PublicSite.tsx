@@ -13,15 +13,13 @@ type PublicSiteShellProps = {
   error: string | null;
   isLoading: boolean;
   isSignedIn: boolean;
-  contentMaxWidthClass?: string;
 };
 
 function PublicSiteShell({
   project,
   error,
   isLoading,
-  isSignedIn,
-  contentMaxWidthClass = 'max-w-[1400px]'
+  isSignedIn
 }: PublicSiteShellProps) {
   const { cssVariables } = useTheme();
   const page =
@@ -38,7 +36,7 @@ function PublicSiteShell({
       className="min-h-screen bg-gradient-to-br from-black via-slate-950 to-slate-900 text-slate-100"
     >
       <div className="w-full px-5 py-8 sm:px-6 sm:py-12">
-        <div className={`mx-auto flex min-h-screen w-full flex-col gap-8 sm:gap-10 ${contentMaxWidthClass}`}>
+        <div className="mx-auto flex min-h-screen w-full max-w-[96rem] flex-col gap-8 sm:gap-10">
           <header className="rounded-3xl border-neon bg-slate-950/80 p-6 shadow-xl neon-glow-soft sm:p-8">
           {isSignedIn ? (
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">
@@ -80,7 +78,7 @@ function PublicSiteShell({
           ) : (
             <section className="w-full rounded-3xl border border-slate-900/80 bg-black/60 p-4 shadow-lg shadow-black/60 sm:p-6">
               {nodes.length ? (
-                <div className="w-full space-y-4 [&_p]:max-w-[70ch] [&_h1]:max-w-[22ch] [&_h2]:max-w-[26ch] [&_h3]:max-w-[30ch] [&_li]:max-w-[70ch]">
+                <div className="mx-auto w-full max-w-[96rem] space-y-4 [&_p]:max-w-[70ch] [&_h1]:max-w-[22ch] [&_h2]:max-w-[26ch] [&_h3]:max-w-[30ch] [&_li]:max-w-[70ch]">
                   {nodes.map((node) => (
                     <NodeRenderer key={node.id} node={node} interactive={false} />
                   ))}
