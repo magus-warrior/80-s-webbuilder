@@ -9,7 +9,7 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 - Uploaded photos are automatically optimized on the backend and stored in each user's asset pool so they can be reused across elements.
 - Published/public page rendering now avoids injecting editor-only container/section chrome (neon border + default padding), so newly created pages match authored styles without unexpected wrapper boxes.
 - Public site admin details (the "Live Site" label, "Open Project" shortcut, and published timestamp) are only shown when the signed-in user owns that specific project.
-- The canvas now includes a "Center all" toggle that quickly centers the full page composition for easier editing.
+- The canvas now separates centering from width constraints: use the center toggle for alignment and choose a width preset (Narrow / Standard / Wide / Full) to match target layouts on large monitors.
 
 ## Deploy with systemd
 1. Install backend dependencies:

@@ -216,6 +216,19 @@ const resetStyleKeys = [
   ...containerLayoutFields.map((field) => field.key)
 ];
 
+type CanvasWidthPreset = 'narrow' | 'standard' | 'wide' | 'full';
+
+const canvasWidthPresets: Array<{
+  id: CanvasWidthPreset;
+  label: string;
+  className: string;
+}> = [
+  { id: 'narrow', label: 'Narrow', className: 'max-w-4xl' },
+  { id: 'standard', label: 'Standard', className: 'max-w-6xl' },
+  { id: 'wide', label: 'Wide', className: 'max-w-[96rem]' },
+  { id: 'full', label: 'Full', className: 'max-w-none' }
+];
+
 interface EditorLayoutProps {
   projects: ProjectSummary[];
   pages: Page[];
@@ -278,6 +291,7 @@ export default function EditorLayout({
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [isCanvasCentered, setIsCanvasCentered] = useState(true);
+  const [canvasWidthPreset, setCanvasWidthPreset] = useState<CanvasWidthPreset>('wide');
   const [isThemeAdvanced, setIsThemeAdvanced] = useState(false);
   const [preserveThemeValues, setPreserveThemeValues] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
@@ -359,6 +373,14 @@ export default function EditorLayout({
   const imageSourceValue = selectedNode?.props?.src ?? '';
   const opensInNewTab = selectedNode?.props?.target === '_blank';
   const isLayoutNode = selectedNode?.type === 'container' || selectedNode?.type === 'section';
+  const activeCanvasWidthPreset = useMemo(
+    () => canvasWidthPresets.find((preset) => preset.id === canvasWidthPreset) ?? canvasWidthPresets[2],
+    [canvasWidthPreset]
+  );
+  const canvasContentClassName = useMemo(() => {
+    const centeredClassName = isCanvasCentered ? 'mx-auto' : '';
+    return `w-full space-y-4 transition-all ${centeredClassName} ${activeCanvasWidthPreset.className}`.trim();
+  }, [activeCanvasWidthPreset.className, isCanvasCentered]);
   const supportsLinks =
     selectedNode?.type === 'text' ||
     selectedNode?.type === 'button' ||
@@ -885,6 +907,24 @@ export default function EditorLayout({
               </button>
               <label className="flex items-center gap-2 rounded-full border border-slate-700 px-2 py-1">
                 <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
+                  Width
+                </span>
+                <select
+                  value={canvasWidthPreset}
+                  onChange={(event) =>
+                    setCanvasWidthPreset(event.target.value as CanvasWidthPreset)
+                  }
+                  className="rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-1 text-xs text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                >
+                  {canvasWidthPresets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2 rounded-full border border-slate-700 px-2 py-1">
+                <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
                   Grid
                 </span>
                 <input
@@ -930,11 +970,7 @@ export default function EditorLayout({
                   </button>
                 </div>
               ) : (
-                <div
-                  className={`space-y-4 transition-all ${
-                    isCanvasCentered ? 'mx-auto w-full max-w-5xl' : ''
-                  }`}
-                >
+                <div className={canvasContentClassName}>
                   {nodes.map((node) => (
                     <NodeRenderer key={node.id} node={node} />
                   ))}
