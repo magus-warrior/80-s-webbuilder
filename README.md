@@ -3,6 +3,10 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 
 ## Editor behavior
 - The Layers panel is context-aware: when a container (or a child inside a container) is selected, the panel only shows that container and the items inside it to reduce visual noise.
+- Block templates now include six core sections: Hero, Gallery, Pricing, Testimonials, FAQ, and Contact.
+- Style controls are intentionally constrained by default (essential controls first, advanced controls behind an explicit toggle) so users can customize without fully breaking visual consistency.
+- Link controls are available on text, button, and image blocks.
+- Uploaded photos are automatically optimized on the backend and stored in each user's asset pool so they can be reused across elements.
 
 ## Deploy with systemd
 1. Install backend dependencies:
