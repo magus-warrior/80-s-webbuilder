@@ -319,6 +319,14 @@ const renderContainerNode = (
   disableVisualStyles: boolean
 ) => {
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
+  if (!interactive) {
+    const columnCount = Number.parseInt(String(node.props?.columns ?? ''), 10);
+    if (!Number.isNaN(columnCount) && columnCount > 0) {
+      style.gridTemplateColumns = `repeat(auto-fit, minmax(min(100%, ${getResponsiveColumnMinWidth(
+        columnCount
+      )}px), 1fr))`;
+    }
+  }
   const hasExplicitWidth = Object.entries(node.props ?? {}).some(([key, value]) => {
     if (typeof value !== 'string' && typeof value !== 'number') {
       return false;
@@ -392,6 +400,19 @@ const parseLength = (value?: string) => {
 };
 
 const toPx = (value: number) => `${Math.round(value)}px`;
+
+const getResponsiveColumnMinWidth = (columnCount: number) => {
+  if (columnCount >= 4) {
+    return 180;
+  }
+  if (columnCount === 3) {
+    return 220;
+  }
+  if (columnCount === 2) {
+    return 260;
+  }
+  return 320;
+};
 
 export default function NodeRenderer({
   node,
