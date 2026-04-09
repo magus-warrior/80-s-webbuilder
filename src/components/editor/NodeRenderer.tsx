@@ -320,6 +320,12 @@ const renderContainerNode = (
 ) => {
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
   if (!interactive) {
+    style.height = undefined;
+    if (typeof style.width === 'string' || typeof style.width === 'number') {
+      style.width = `min(100%, ${style.width})`;
+    }
+  }
+  if (!interactive) {
     const columnCount = Number.parseInt(String(node.props?.columns ?? ''), 10);
     if (!Number.isNaN(columnCount) && columnCount > 0) {
       style.gridTemplateColumns = `repeat(auto-fit, minmax(min(100%, ${getResponsiveColumnMinWidth(
@@ -353,6 +359,12 @@ const renderSectionNode = (
   disableVisualStyles: boolean
 ) => {
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
+  if (!interactive) {
+    style.height = undefined;
+    if (typeof style.width === 'string' || typeof style.width === 'number') {
+      style.width = `min(100%, ${style.width})`;
+    }
+  }
   const hasExplicitWidth = Object.entries(node.props ?? {}).some(([key, value]) => {
     if (typeof value !== 'string' && typeof value !== 'number') {
       return false;
@@ -475,15 +487,16 @@ export default function NodeRenderer({
       touchAction: interactive ? 'none' : undefined
     };
 
-    if (width) {
+    if (width && interactive) {
       style.width = width;
     }
 
-    if (height) {
+    if (height && interactive) {
       style.height = height;
     }
     if (!interactive) {
       style.maxWidth = '100%';
+      style.transform = undefined;
     }
 
     return style;
