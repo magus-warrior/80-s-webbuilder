@@ -294,6 +294,130 @@ export const templatePresets: Record<string, NodeTemplate> = {
         ]
       }
     ]
+  },
+  FAQ: {
+    type: 'container',
+    name: 'FAQ',
+    props: {
+      columns: '1',
+      gap: '12px',
+      padding: '24px',
+      backgroundColor: 'var(--theme-surface-card, rgba(15, 23, 42, 0.75))',
+      borderRadius: 'var(--theme-radius-lg, 16px)'
+    },
+    children: [
+      {
+        type: 'text',
+        name: 'FAQ Heading',
+        props: {
+          content: 'Frequently asked questions',
+          fontSize: '22px',
+          fontWeight: '600',
+          color: 'var(--theme-text-primary, #e2e8f0)',
+          margin: '0 0 6px 0'
+        }
+      },
+      {
+        type: 'text',
+        name: 'FAQ Intro',
+        props: {
+          content: 'Keep it short and answer the top objections before checkout.',
+          color: 'var(--theme-text-muted, #94a3b8)',
+          margin: '0 0 12px 0'
+        }
+      },
+      {
+        type: 'section',
+        name: 'FAQ Item 1',
+        props: {
+          padding: '14px',
+          borderRadius: 'var(--theme-radius-lg, 16px)',
+          backgroundColor: 'var(--theme-surface-elevated, rgba(30, 41, 59, 0.7))'
+        },
+        children: [
+          {
+            type: 'text',
+            name: 'Question 1',
+            props: {
+              content: 'How quickly can I launch?',
+              fontWeight: '600',
+              color: 'var(--theme-text-primary, #e2e8f0)',
+              margin: '0 0 8px 0'
+            }
+          },
+          {
+            type: 'text',
+            name: 'Answer 1',
+            props: {
+              content: 'Most creators publish their first page the same day.',
+              color: 'var(--theme-text-muted, #94a3b8)'
+            }
+          }
+        ]
+      },
+      {
+        type: 'section',
+        name: 'FAQ Item 2',
+        props: {
+          padding: '14px',
+          borderRadius: 'var(--theme-radius-lg, 16px)',
+          backgroundColor: 'var(--theme-surface-elevated, rgba(30, 41, 59, 0.7))'
+        },
+        children: [
+          {
+            type: 'text',
+            name: 'Question 2',
+            props: {
+              content: 'Can I connect social links?',
+              fontWeight: '600',
+              color: 'var(--theme-text-primary, #e2e8f0)',
+              margin: '0 0 8px 0'
+            }
+          },
+          {
+            type: 'text',
+            name: 'Answer 2',
+            props: {
+              content: 'Yes. Any text, button, or image block can point to a URL.',
+              color: 'var(--theme-text-muted, #94a3b8)'
+            }
+          }
+        ]
+      }
+    ]
+  },
+  Contact: {
+    type: 'section',
+    name: 'Contact Block',
+    props: {
+      padding: '24px',
+      backgroundColor: 'var(--theme-surface-card, rgba(15, 23, 42, 0.75))',
+      borderRadius: 'var(--theme-radius-lg, 16px)'
+    },
+    children: [
+      {
+        type: 'text',
+        name: 'Contact Heading',
+        props: {
+          content: 'Ready to work together?',
+          fontSize: '22px',
+          fontWeight: '600',
+          color: 'var(--theme-text-primary, #e2e8f0)',
+          margin: '0 0 10px 0'
+        }
+      },
+      {
+        type: 'button',
+        name: 'Contact CTA',
+        props: {
+          label: 'Message us',
+          href: 'mailto:hello@example.com',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          color: 'var(--theme-text-on-accent, #0f172a)'
+        }
+      }
+    ]
   }
 };
 
@@ -301,5 +425,7 @@ export const blockTemplates = [
   { key: 'Hero', label: 'Hero', template: templatePresets.Hero },
   { key: 'Gallery', label: 'Gallery', template: templatePresets.Gallery },
   { key: 'Pricing', label: 'Pricing', template: templatePresets.Pricing },
-  { key: 'Testimonials', label: 'Testimonials', template: templatePresets.Testimonials }
+  { key: 'Testimonials', label: 'Testimonials', template: templatePresets.Testimonials },
+  { key: 'FAQ', label: 'FAQ', template: templatePresets.FAQ },
+  { key: 'Contact', label: 'Contact', template: templatePresets.Contact }
 ];

@@ -1,15 +1,16 @@
 from datetime import datetime, timezone
 import copy
+import io
 from pathlib import Path
 import json
 import re
-import shutil
 import uuid
 from typing import Any, Iterable
 
 from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from PIL import Image, ImageOps
 from sqlalchemy.orm import Session
 
 from auth import get_current_user
@@ -27,6 +28,9 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 RESERVED_PUBLIC_SLUGS = {"projects", "assets", "auth", "uploads", "public"}
 MAX_PROJECT_NAME_LENGTH = 80
 MAX_PROJECT_DESCRIPTION_LENGTH = 280
+COMPRESSIBLE_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+MAX_IMAGE_DIMENSION = 1920
+WEBP_QUALITY = 82
 
 app.include_router(auth_router)
 
@@ -283,11 +287,10 @@ def upload_asset(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
-    extension = Path(file.filename).suffix
-    stored_name = f"{uuid.uuid4().hex}{extension}"
+    stored_name, asset_bytes = build_asset_storage_payload(file)
     destination = UPLOAD_DIR / stored_name
     with destination.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(asset_bytes)
 
     asset = Asset(
         owner_id=current_user.id,
@@ -299,6 +302,35 @@ def upload_asset(
     db.commit()
     db.refresh(asset)
     return serialize_asset(asset)
+
+
+def build_asset_storage_payload(file: UploadFile) -> tuple[str, bytes]:
+    extension = Path(file.filename).suffix
+    file.file.seek(0)
+    raw_bytes = file.file.read()
+    if not raw_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    try:
+        with Image.open(io.BytesIO(raw_bytes)) as image:
+            image.load()
+            if image.format not in COMPRESSIBLE_IMAGE_FORMATS:
+                return f"{uuid.uuid4().hex}{extension}", raw_bytes
+
+            normalized = ImageOps.exif_transpose(image)
+            if normalized.mode == "RGBA":
+                background = Image.new("RGB", normalized.size, (0, 0, 0))
+                background.paste(normalized, mask=normalized.getchannel("A"))
+                normalized = background
+            else:
+                normalized = normalized.convert("RGB")
+
+            normalized.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION), Image.Resampling.LANCZOS)
+            output = io.BytesIO()
+            normalized.save(output, format="WEBP", quality=WEBP_QUALITY, method=6)
+            return f"{uuid.uuid4().hex}.webp", output.getvalue()
+    except OSError:
+        return f"{uuid.uuid4().hex}{extension}", raw_bytes
 
 
 @app.post("/projects", status_code=201)

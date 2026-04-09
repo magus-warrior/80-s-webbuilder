@@ -355,6 +355,7 @@ export default function EditorLayout({
   const textKey = selectedNode?.type === 'button' ? 'label' : 'content';
   const textValue = selectedNode?.props?.[textKey] ?? '';
   const linkValue = selectedNode?.props?.href ?? '';
+  const imageSourceValue = selectedNode?.props?.src ?? '';
   const opensInNewTab = selectedNode?.props?.target === '_blank';
   const isLayoutNode = selectedNode?.type === 'container' || selectedNode?.type === 'section';
   const supportsLinks =
@@ -1302,6 +1303,21 @@ export default function EditorLayout({
                     <div className="mt-3 space-y-3">
                       <label className="block">
                         <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                          Image URL
+                        </span>
+                        <input
+                          value={imageSourceValue}
+                          onChange={(event) =>
+                            updateNodeProps(selectedNode.id, {
+                              src: event.target.value
+                            })
+                          }
+                          placeholder="https://example.com/photo.jpg"
+                          className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
                           Upload image
                         </span>
                         <input
@@ -1311,6 +1327,9 @@ export default function EditorLayout({
                           disabled={isUploadingAsset}
                           className="mt-2 block w-full text-xs text-slate-300 file:mr-3 file:rounded-full file:border-0 file:bg-neon-gradient file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-950 file:shadow-lg file:neon-glow-soft disabled:opacity-60"
                         />
+                        <span className="mt-2 block text-[0.62rem] uppercase tracking-[0.16em] text-slate-500">
+                          Uploaded photos are auto-optimized and saved to your asset pool.
+                        </span>
                       </label>
                       <label className="block">
                         <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
