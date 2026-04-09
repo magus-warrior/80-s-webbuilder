@@ -277,6 +277,7 @@ export default function EditorLayout({
   const { tokens, updateTokenValue, applyTokens, cssVariables } = useTheme();
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const [isCanvasCentered, setIsCanvasCentered] = useState(true);
   const [isThemeAdvanced, setIsThemeAdvanced] = useState(false);
   const [preserveThemeValues, setPreserveThemeValues] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
@@ -870,6 +871,18 @@ export default function EditorLayout({
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
               <span className="rounded-full border border-slate-700 px-2 py-1">Desktop</span>
               <span className="rounded-full border border-slate-700 px-2 py-1">100%</span>
+              <button
+                type="button"
+                onClick={() => setIsCanvasCentered((prev) => !prev)}
+                aria-pressed={isCanvasCentered}
+                className={`rounded-full border px-2 py-1 text-[0.65rem] uppercase tracking-[0.2em] transition ${
+                  isCanvasCentered
+                    ? 'border-cyan-300/80 bg-cyan-500/10 text-cyan-100'
+                    : 'border-slate-700 text-slate-300 hover:border-cyan-400/60 hover:text-slate-100'
+                }`}
+              >
+                {isCanvasCentered ? 'Centered' : 'Center all'}
+              </button>
               <label className="flex items-center gap-2 rounded-full border border-slate-700 px-2 py-1">
                 <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
                   Grid
@@ -917,7 +930,11 @@ export default function EditorLayout({
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div
+                  className={`space-y-4 transition-all ${
+                    isCanvasCentered ? 'mx-auto w-full max-w-5xl' : ''
+                  }`}
+                >
                   {nodes.map((node) => (
                     <NodeRenderer key={node.id} node={node} />
                   ))}
