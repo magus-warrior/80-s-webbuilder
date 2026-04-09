@@ -320,11 +320,11 @@ const renderContainerNode = (
 ) => {
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
   const hasBackground = Boolean(style.background || style.backgroundColor);
+  const className = interactive
+    ? `rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`
+    : undefined;
   return (
-    <div
-      style={style}
-      className={`rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`}
-    >
+    <div style={style} className={className}>
       {renderChildren(node, interactive, disableVisualStyles)}
     </div>
   );
@@ -338,11 +338,11 @@ const renderSectionNode = (
 ) => {
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
   const hasBackground = Boolean(style.background || style.backgroundColor);
+  const className = interactive
+    ? `rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`
+    : undefined;
   return (
-    <section
-      style={style}
-      className={`rounded-2xl border-neon-soft p-4${hasBackground ? '' : ' bg-black/40'}`}
-    >
+    <section style={style} className={className}>
       {renderChildren(node, interactive, disableVisualStyles)}
     </section>
   );

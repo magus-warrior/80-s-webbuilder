@@ -7,6 +7,7 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 - Style controls are intentionally constrained by default (essential controls first, advanced controls behind an explicit toggle) so users can customize without fully breaking visual consistency.
 - Link controls are available on text, button, and image blocks.
 - Uploaded photos are automatically optimized on the backend and stored in each user's asset pool so they can be reused across elements.
+- Published/public page rendering now avoids injecting editor-only container/section chrome (neon border + default padding), so newly created pages match authored styles without unexpected wrapper boxes.
 
 ## Deploy with systemd
 1. Install backend dependencies:
