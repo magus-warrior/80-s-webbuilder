@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import NodeRenderer from '../components/editor/NodeRenderer';
 import { ThemeProvider, useTheme } from '../components/editor/ThemeProvider';
 import type { Project } from '../models';
+import { useAuthStore } from '../store/authStore';
 
 const fallbackThemeTokens: Project['themeTokens'] = [];
 
@@ -11,9 +12,10 @@ type PublicSiteShellProps = {
   project: Project | null;
   error: string | null;
   isLoading: boolean;
+  isSignedIn: boolean;
 };
 
-function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
+function PublicSiteShell({ project, error, isLoading, isSignedIn }: PublicSiteShellProps) {
   const { cssVariables } = useTheme();
   const page =
     project?.pages?.find((entry) => entry.id === project.publicPageId) ??
@@ -28,11 +30,13 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
       style={cssVariables}
       className="min-h-screen bg-gradient-to-br from-black via-slate-950 to-slate-900 text-slate-100"
     >
-      <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-10 px-6 py-12">
-        <header className="rounded-3xl border-neon bg-slate-950/80 p-8 shadow-xl neon-glow-soft">
-          <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">
-            Live Site
-          </p>
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-5 py-8 sm:gap-10 sm:px-6 sm:py-12">
+        <header className="rounded-3xl border-neon bg-slate-950/80 p-6 shadow-xl neon-glow-soft sm:p-8">
+          {isSignedIn ? (
+            <p className="text-xs uppercase tracking-[0.3em] text-cyan-200">
+              Live Site
+            </p>
+          ) : null}
           <h1 className="mt-4 text-3xl font-semibold text-white sm:text-4xl">
             {project?.name ?? 'Loading public site'}
           </h1>
@@ -40,7 +44,7 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
             {project?.description ??
               'This is the published version of your page.'}
           </p>
-          {project?.id ? (
+          {isSignedIn && project?.id ? (
             <div className="mt-6">
               <Link
                 to={`/projects/${project.id}`}
@@ -50,7 +54,7 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
               </Link>
             </div>
           ) : null}
-          {publishedAt ? (
+          {isSignedIn && publishedAt ? (
             <p className="mt-4 text-xs uppercase tracking-[0.25em] text-slate-400">
               Published {publishedAt}
             </p>
@@ -66,9 +70,9 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
             We couldn&apos;t load this page right now.
           </section>
         ) : (
-          <section className="rounded-2xl border border-slate-900/80 bg-black/60 p-6 shadow-lg shadow-black/60">
+          <section className="rounded-3xl border border-slate-900/80 bg-black/60 p-4 shadow-lg shadow-black/60 sm:p-6">
             {nodes.length ? (
-              <div className="space-y-4">
+              <div className="mx-auto max-w-5xl space-y-4">
                 {nodes.map((node) => (
                   <NodeRenderer key={node.id} node={node} interactive={false} />
                 ))}
@@ -85,9 +89,12 @@ function PublicSiteShell({ project, error, isLoading }: PublicSiteShellProps) {
 
 export default function PublicSite() {
   const { slug } = useParams<{ slug: string }>();
+  const authToken = useAuthStore((state) => state.token);
+  const isSignedIn = Boolean(authToken);
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isProjectOwner, setIsProjectOwner] = useState(false);
 
   const handleTokensChange = useCallback(() => {}, []);
 
@@ -95,6 +102,7 @@ export default function PublicSite() {
     if (!slug) {
       setError('Missing public site slug.');
       setProject(null);
+      setIsProjectOwner(false);
       return;
     }
 
@@ -132,6 +140,38 @@ export default function PublicSite() {
     return () => controller.abort();
   }, [slug]);
 
+  useEffect(() => {
+    if (!authToken || !project?.id) {
+      setIsProjectOwner(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const checkOwnership = async () => {
+      try {
+        const response = await fetch('/projects', {
+          signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`Project ownership check failed: ${response.status}`);
+        }
+        const myProjects = (await response.json()) as Array<{ id: string }>;
+        setIsProjectOwner(myProjects.some((entry) => entry.id === project.id));
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+        setIsProjectOwner(false);
+      }
+    };
+
+    void checkOwnership();
+    return () => controller.abort();
+  }, [authToken, project?.id]);
+
   const themeTokens = useMemo(
     () => project?.themeTokens ?? fallbackThemeTokens,
     [project?.themeTokens]
@@ -139,7 +179,12 @@ export default function PublicSite() {
 
   return (
     <ThemeProvider tokens={themeTokens} onTokensChange={handleTokensChange}>
-      <PublicSiteShell project={project} error={error} isLoading={isLoading} />
+      <PublicSiteShell
+        project={project}
+        error={error}
+        isLoading={isLoading}
+        isSignedIn={isSignedIn && isProjectOwner}
+      />
     </ThemeProvider>
   );
 }
