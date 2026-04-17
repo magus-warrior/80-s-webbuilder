@@ -21,6 +21,7 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 - Drag/drop now focuses on insertion indicators with index-aware drops into layout compositions, reducing canvas clutter while keeping placement predictable.
 - Element move handles now appear only for the currently selected node, keeping the canvas cleaner while preserving direct drag controls.
 - Builder UX now prioritizes one-click creation: a quick-insert bar sits above the canvas, empty-canvas starter actions add complete sections instantly, and a primitives panel adds rows/columns/cards without requiring drag-and-drop.
+- The editor canvas now scrolls vertically as content grows, so you can keep building sections down the page without hitting a visual cutoff.
 - One-click block/primitive insertion now respects container context: if a layout container is selected, new elements are inserted into that container instead of being appended at the canvas root.
 - Starter compositions now favor composable primitives (hero variants, feature rows, gallery strips, pricing matrix) instead of monolithic one-off templates.
 - New interactive block types are available: **Form** and **Poll** nodes, plus starter templates for Lead Capture and Audience Poll sections.
