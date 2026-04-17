@@ -911,6 +911,13 @@ export default function NodeRenderer({
               x: toPx(nextX),
               y: toPx(nextY)
             }, { history: 'debounced' });
+          },
+          end() {
+            const { x: finalX, y: finalY } = positionRef.current;
+            updateNodeProps(node.id, {
+              x: toPx(finalX),
+              y: toPx(finalY)
+            });
           }
         }
       })
@@ -935,6 +942,15 @@ export default function NodeRenderer({
               width: toPx(event.rect.width),
               height: toPx(event.rect.height)
             }, { history: 'debounced' });
+          },
+          end(event) {
+            const { x: finalX, y: finalY } = positionRef.current;
+            updateNodeProps(node.id, {
+              x: toPx(finalX),
+              y: toPx(finalY),
+              width: toPx(event.rect.width),
+              height: toPx(event.rect.height)
+            });
           }
         }
       });
