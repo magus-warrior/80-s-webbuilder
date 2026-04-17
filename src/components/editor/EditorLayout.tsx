@@ -173,6 +173,9 @@ const primitiveNodes: Array<{ type: Node['type']; label: string }> = [
   { type: 'button', label: 'Button' },
   { type: 'image', label: 'Image' }
 ];
+const primitiveNodeTypes = new Set<Node['type']>(primitiveNodes.map((item) => item.type));
+const blockTemplateMimeType = 'application/x-block-template';
+const primitiveNodeMimeType = 'application/x-node-primitive';
 
 interface EditorLayoutProps {
   projects: ProjectSummary[];
@@ -442,8 +445,23 @@ export default function EditorLayout({
       })
     );
   };
+  const resolveDraggedPrimitiveType = (event: DragEvent<HTMLElement>): Node['type'] | null => {
+    const rawType = event.dataTransfer.getData(primitiveNodeMimeType);
+    if (!rawType) {
+      return null;
+    }
+    if (!primitiveNodeTypes.has(rawType as Node['type'])) {
+      return null;
+    }
+    return rawType as Node['type'];
+  };
+  const handlePrimitiveDragStart = (type: Node['type']) => (event: DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.setData(primitiveNodeMimeType, type);
+    event.dataTransfer.setData('text/plain', type);
+    event.dataTransfer.effectAllowed = 'copy';
+  };
   const handleBlockDragStart = (templateName: string) => (event: DragEvent<HTMLButtonElement>) => {
-    event.dataTransfer.setData('application/x-block-template', templateName);
+    event.dataTransfer.setData(blockTemplateMimeType, templateName);
     event.dataTransfer.setData('text/plain', templateName);
     event.dataTransfer.effectAllowed = 'copy';
   };
@@ -453,8 +471,13 @@ export default function EditorLayout({
   };
   const handleCanvasDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    const draggedPrimitiveType = resolveDraggedPrimitiveType(event);
+    if (draggedPrimitiveType) {
+      handleAddPrimitive(draggedPrimitiveType);
+      return;
+    }
     const templateName =
-      event.dataTransfer.getData('application/x-block-template') ||
+      event.dataTransfer.getData(blockTemplateMimeType) ||
       event.dataTransfer.getData('text/plain');
     if (!templateName) {
       return;
@@ -898,6 +921,8 @@ export default function EditorLayout({
                   key={item.type}
                   type="button"
                   onClick={() => handleAddPrimitive(item.type)}
+                  onDragStart={handlePrimitiveDragStart(item.type)}
+                  draggable
                   className="rounded-lg border border-slate-800/80 bg-black/70 px-2 py-1.5 text-left text-xs text-slate-200 transition hover:border-cyan-400/60 hover:text-cyan-100"
                 >
                   + {item.label}

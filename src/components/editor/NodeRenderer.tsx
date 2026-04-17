@@ -11,7 +11,7 @@ import interact from 'interactjs';
 
 import type { Node } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
-import { getNodePropAsString } from './nodeSchemas';
+import { getNodePropAsString, getNodeSchema } from './nodeSchemas';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
 import { isComponentInstanceNode, resolveComponentInstanceNode } from './componentInstances';
 import { useTheme } from './ThemeProvider';
@@ -688,6 +688,8 @@ const getResponsiveColumnMinWidth = (columnCount: number) => {
   }
   return 320;
 };
+const blockTemplateMimeType = 'application/x-block-template';
+const primitiveNodeMimeType = 'application/x-node-primitive';
 
 export default function NodeRenderer({
   node,
@@ -755,12 +757,27 @@ export default function NodeRenderer({
 
   const resolveDraggedTemplate = (event: DragEvent<HTMLDivElement>) => {
     const templateName =
-      event.dataTransfer.getData('application/x-block-template') ||
+      event.dataTransfer.getData(blockTemplateMimeType) ||
       event.dataTransfer.getData('text/plain');
     if (!templateName) {
       return null;
     }
     return blockTemplates.find((item) => item.key === templateName)?.template ?? null;
+  };
+  const resolveDraggedPrimitive = (event: DragEvent<HTMLDivElement>) => {
+    const type = event.dataTransfer.getData(primitiveNodeMimeType) as Node['type'];
+    if (!type) {
+      return null;
+    }
+    const schema = getNodeSchema(type);
+    if (!schema) {
+      return null;
+    }
+    return {
+      type,
+      name: schema.defaultName,
+      props: schema.defaultProps
+    };
   };
 
   const handleContainerDragOver = (event: DragEvent<HTMLDivElement>) => {
@@ -779,7 +796,9 @@ export default function NodeRenderer({
     event.preventDefault();
     event.stopPropagation();
     const template = resolveDraggedTemplate(event);
-    if (!template) {
+    const primitiveTemplate = resolveDraggedPrimitive(event);
+    const dropTemplate = template ?? primitiveTemplate;
+    if (!dropTemplate) {
       setDropIndicatorIndex(null);
       return;
     }
@@ -794,7 +813,7 @@ export default function NodeRenderer({
           type: wrapperType,
           name: wrapperType === 'row' ? 'New Row' : 'New Column',
           props: {},
-          children: [template]
+          children: [dropTemplate]
         }),
         dropIndicatorIndex ?? undefined
       );
@@ -802,7 +821,7 @@ export default function NodeRenderer({
       return;
     }
 
-    addNodeToContainer(node.id, buildNodeFromTemplate(template), dropIndicatorIndex ?? undefined);
+    addNodeToContainer(node.id, buildNodeFromTemplate(dropTemplate), dropIndicatorIndex ?? undefined);
     setDropIndicatorIndex(null);
   };
   const handleContainerDragLeave = (event: DragEvent<HTMLDivElement>) => {
