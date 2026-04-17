@@ -900,6 +900,7 @@ export default function NodeRenderer({
 
     const interactable = interact(element)
       .draggable({
+        allowFrom: '.node-drag-handle',
         modifiers: dragModifiers,
         listeners: {
           move(event) {
@@ -1033,6 +1034,25 @@ export default function NodeRenderer({
       </div>
     ) : null;
 
+  const dragHandle =
+    interactive && !isComponentNodeInstance ? (
+      <button
+        type="button"
+        className={`node-drag-handle absolute left-2 top-2 z-30 h-6 w-6 rounded-full border border-slate-700/80 bg-black/70 text-[0.55rem] uppercase tracking-[0.12em] text-slate-300 transition hover:border-cyan-300/70 hover:text-cyan-100 ${
+          isEditing ? 'pointer-events-none opacity-0' : 'opacity-90'
+        }`}
+        onMouseDown={(event) => {
+          event.stopPropagation();
+          setSelectedNodeId(node.id);
+        }}
+        onClick={(event) => event.stopPropagation()}
+        aria-label={`Move ${node.name}`}
+        title="Drag to move"
+      >
+        ↕
+      </button>
+    ) : null;
+
 
   const insertionIndicator =
     interactive && isLayoutNode && dropIndicatorIndex !== null ? (
@@ -1070,6 +1090,7 @@ export default function NodeRenderer({
           editableProps,
           publicSlug
         )}
+        {dragHandle}
         {insertionIndicator}
         {resizeHandles}
       </div>
@@ -1102,6 +1123,7 @@ export default function NodeRenderer({
     >
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{resolvedNode.type}</div>
       <p className="mt-2 text-sm text-slate-200">{resolvedNode.name}</p>
+      {dragHandle}
       {renderChildren(
         resolvedNode,
         interactive && !isComponentNodeInstance,
