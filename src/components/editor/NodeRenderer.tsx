@@ -803,24 +803,6 @@ export default function NodeRenderer({
       return;
     }
 
-    const target = event.target as HTMLElement;
-    const slotType = target.closest('[data-layout-slot]')?.getAttribute('data-layout-slot');
-    if (slotType === 'new-row' || slotType === 'new-column') {
-      const wrapperType = slotType === 'new-row' ? 'row' : 'column';
-      addNodeToContainer(
-        node.id,
-        buildNodeFromTemplate({
-          type: wrapperType,
-          name: wrapperType === 'row' ? 'New Row' : 'New Column',
-          props: {},
-          children: [dropTemplate]
-        }),
-        dropIndicatorIndex ?? undefined
-      );
-      setDropIndicatorIndex(null);
-      return;
-    }
-
     addNodeToContainer(node.id, buildNodeFromTemplate(dropTemplate), dropIndicatorIndex ?? undefined);
     setDropIndicatorIndex(null);
   };
@@ -1016,24 +998,6 @@ export default function NodeRenderer({
       />
     ) : null;
 
-  const layoutSlotDropZones =
-    interactive && isLayoutNode ? (
-      <div className="pointer-events-none absolute inset-x-3 bottom-2 z-20 flex gap-2">
-        <div
-          data-layout-slot="new-row"
-          className="pointer-events-auto flex-1 rounded-md border border-dashed border-cyan-400/60 bg-cyan-500/10 px-2 py-1 text-center text-[0.6rem] uppercase tracking-[0.18em] text-cyan-100"
-        >
-          Drop to wrap in row
-        </div>
-        <div
-          data-layout-slot="new-column"
-          className="pointer-events-auto flex-1 rounded-md border border-dashed border-fuchsia-400/60 bg-fuchsia-500/10 px-2 py-1 text-center text-[0.6rem] uppercase tracking-[0.18em] text-fuchsia-100"
-        >
-          Drop to wrap in column
-        </div>
-      </div>
-    ) : null;
-
   if (renderer) {
     return (
       <div
@@ -1063,7 +1027,6 @@ export default function NodeRenderer({
           publicSlug
         )}
         {insertionIndicator}
-        {layoutSlotDropZones}
         {resizeHandles}
       </div>
     );
