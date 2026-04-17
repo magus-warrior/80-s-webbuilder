@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import type { Asset, Node, Project, ProjectSummary, ThemeToken } from './models';
+import type { Asset, ComponentFamily, Node, Project, ProjectSummary, ThemeToken } from './models';
 import AuthScreen from './components/auth/AuthScreen';
 import EditorLayout from './components/editor/EditorLayout';
 import RenderedNodesPreview from './components/editor/RenderedNodesPreview';
@@ -66,6 +66,7 @@ const readJsonResponse = async <T,>(response: Response, context: string): Promis
 
 const normalizeProjectNodes = (project: Project): Project => ({
   ...project,
+  componentFamilies: project.componentFamilies ?? [],
   pages: project.pages.map((page) => ({
     ...page,
     nodes: migrateNodeTree(page.nodes ?? [])
@@ -98,6 +99,8 @@ export default function App() {
   const editorNodes = useEditorStore((state) => state.nodes);
   const currentPageId = useEditorStore((state) => state.currentPageId);
   const setCurrentPageId = useEditorStore((state) => state.setCurrentPageId);
+  const componentFamilies = useEditorStore((state) => state.componentFamilies);
+  const setComponentFamilies = useEditorStore((state) => state.setComponentFamilies);
   const resolvedPageId = currentPageId ?? project?.pages[0]?.id ?? null;
   const previewPage =
     project?.pages.find((page) => page.id === resolvedPageId) ?? project?.pages[0];
@@ -142,6 +145,7 @@ export default function App() {
     base: Project,
     nodes: Node[],
     tokens: ThemeToken[],
+    componentSet: ComponentFamily[],
     pageId: string | null
   ): Project => {
     const targetPageId = pageId ?? base.pages[0]?.id ?? null;
@@ -149,6 +153,7 @@ export default function App() {
       ...base,
       updatedAt: new Date().toISOString(),
       themeTokens: tokens,
+      componentFamilies: componentSet,
       pages: base.pages.map((page) =>
         page.id === targetPageId
           ? {
@@ -164,6 +169,7 @@ export default function App() {
     base: Project,
     nodes: Node[],
     tokens: ThemeToken[],
+    componentSet: ComponentFamily[],
     pageId: string | null
   ) => {
     const basePage = base.pages.find((page) => page.id === pageId) ?? base.pages[0];
@@ -173,7 +179,8 @@ export default function App() {
     const baseNodes = basePage.nodes ?? [];
     const nodesMatch = JSON.stringify(baseNodes) === JSON.stringify(nodes);
     const tokensMatch = JSON.stringify(base.themeTokens ?? []) === JSON.stringify(tokens);
-    return !(nodesMatch && tokensMatch);
+    const componentsMatch = JSON.stringify(base.componentFamilies ?? []) === JSON.stringify(componentSet);
+    return !(nodesMatch && tokensMatch && componentsMatch);
   };
 
   const persistProject = async (nextProject: Project): Promise<boolean> => {
@@ -227,6 +234,7 @@ export default function App() {
               savedProject,
               currentNodes,
               themeTokens,
+              componentFamilies,
               resolvedSavedPageId
             )
           : savedProject;
@@ -257,13 +265,14 @@ export default function App() {
     const currentNodes = useEditorStore.getState().nodes;
     const currentPageId = useEditorStore.getState().currentPageId;
     const resolvedPageId = currentPageId ?? baseProject.pages[0]?.id ?? null;
-    if (!hasProjectChanges(baseProject, currentNodes, themeTokens, resolvedPageId)) {
+    if (!hasProjectChanges(baseProject, currentNodes, themeTokens, componentFamilies, resolvedPageId)) {
       return true;
     }
     const nextProject = buildUpdatedProject(
       baseProject,
       currentNodes,
       themeTokens,
+      componentFamilies,
       resolvedPageId
     );
     setProject(nextProject);
@@ -779,8 +788,9 @@ export default function App() {
     if (lastLoadedProjectId.current !== project.id) {
       lastLoadedProjectId.current = project.id;
       setThemeTokens(project.themeTokens ?? []);
+      setComponentFamilies(project.componentFamilies ?? []);
     }
-  }, [currentPageId, project, setCurrentPageId]);
+  }, [currentPageId, project, setComponentFamilies, setCurrentPageId]);
 
   useEffect(() => {
     latestProject.current = project;
@@ -792,7 +802,15 @@ export default function App() {
       return;
     }
 
-    if (!hasProjectChanges(baseProject, editorNodes, themeTokens, resolvedPageId)) {
+    if (
+      !hasProjectChanges(
+        baseProject,
+        editorNodes,
+        themeTokens,
+        componentFamilies,
+        resolvedPageId
+      )
+    ) {
       return;
     }
 
@@ -800,6 +818,7 @@ export default function App() {
       baseProject,
       editorNodes,
       themeTokens,
+      componentFamilies,
       resolvedPageId
     );
     setProject(nextProject);
@@ -816,7 +835,7 @@ export default function App() {
         window.clearTimeout(saveTimeout.current);
       }
     };
-  }, [editorNodes, resolvedPageId, themeTokens]);
+  }, [componentFamilies, editorNodes, resolvedPageId, themeTokens]);
 
   const validateProjectName = async (
     name: string,
@@ -877,7 +896,8 @@ export default function App() {
           nodes: []
         }
       ],
-      themeTokens: []
+      themeTokens: [],
+      componentFamilies: []
     };
     setProjectError(null);
     try {
@@ -1152,6 +1172,7 @@ export default function App() {
             activeProjectId={activeProjectId}
             activePageId={resolvedPageId}
             assets={assets}
+            componentFamilies={componentFamilies}
             isLoadingAssets={isLoadingAssets}
             isUploadingAsset={isUploadingAsset}
             assetError={assetError}

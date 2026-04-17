@@ -1,18 +1,25 @@
 import { create } from 'zustand';
 
-import type { Node, NodePropValue, NodeProps } from '../models';
+import type { ComponentFamily, Node, NodePropValue, NodeProps } from '../models';
 
 type EditorState = {
   nodes: Node[];
   selectedNodeId: string | null;
   currentPageId: string | null;
   gridSize: number;
+  componentFamilies: ComponentFamily[];
   historyPast: EditorSnapshot[];
   historyFuture: EditorSnapshot[];
   setSelectedNodeId: (nodeId: string | null) => void;
   setCurrentPageId: (pageId: string | null) => void;
   setNodes: (nodes: Node[]) => void;
   setGridSize: (gridSize: number) => void;
+  setComponentFamilies: (componentFamilies: ComponentFamily[]) => void;
+  upsertComponentFamily: (family: ComponentFamily) => void;
+  updateNodeMetadata: (
+    nodeId: string,
+    metadataUpdater: (metadata: Node['metadata']) => Node['metadata']
+  ) => void;
   updateNodeProps: (
     nodeId: string,
     updates: Record<string, NodePropValue>,
@@ -31,6 +38,7 @@ type EditorSnapshot = {
   nodes: Node[];
   selectedNodeId: string | null;
   currentPageId: string | null;
+  componentFamilies: ComponentFamily[];
 };
 
 type HistoryMode = 'immediate' | 'debounced' | 'none';
@@ -283,7 +291,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
   const snapshotState = (state: EditorState): EditorSnapshot => ({
     nodes: state.nodes,
     selectedNodeId: state.selectedNodeId,
-    currentPageId: state.currentPageId
+    currentPageId: state.currentPageId,
+    componentFamilies: state.componentFamilies
   });
 
   const commitPendingSnapshot = () => {
@@ -334,6 +343,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     selectedNodeId: null,
     currentPageId: null,
     gridSize: 16,
+    componentFamilies: [],
     historyPast: [],
     historyFuture: [],
     setSelectedNodeId: (nodeId) => {
@@ -367,6 +377,36 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setGridSize: (gridSize) => {
       set(() => ({
         gridSize
+      }));
+    },
+    setComponentFamilies: (componentFamilies) => {
+      set(() => ({
+        componentFamilies
+      }));
+    },
+    upsertComponentFamily: (family) => {
+      pushSnapshot();
+      set((state) => {
+        const index = state.componentFamilies.findIndex((item) => item.id === family.id);
+        if (index === -1) {
+          return {
+            componentFamilies: [...state.componentFamilies, family]
+          };
+        }
+        const nextFamilies = [...state.componentFamilies];
+        nextFamilies[index] = family;
+        return {
+          componentFamilies: nextFamilies
+        };
+      });
+    },
+    updateNodeMetadata: (nodeId, metadataUpdater) => {
+      pushSnapshot();
+      set((state) => ({
+        nodes: updateNodeTree(state.nodes, nodeId, (node) => ({
+          ...node,
+          metadata: metadataUpdater(node.metadata)
+        }))
       }));
     },
     updateNodeProps: (nodeId, updates, options) => {
@@ -459,6 +499,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
           nodes: previous.nodes,
           selectedNodeId: previous.selectedNodeId,
           currentPageId: previous.currentPageId,
+          componentFamilies: previous.componentFamilies,
           historyPast: nextPast,
           historyFuture: [snapshotState(state), ...state.historyFuture]
         };
@@ -476,6 +517,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
           nodes: next.nodes,
           selectedNodeId: next.selectedNodeId,
           currentPageId: next.currentPageId,
+          componentFamilies: next.componentFamilies,
           historyPast: [...state.historyPast, snapshotState(state)].slice(-HISTORY_LIMIT),
           historyFuture: remaining
         };

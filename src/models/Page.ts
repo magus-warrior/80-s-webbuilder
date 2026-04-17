@@ -1,3 +1,4 @@
+import type { PageComponentInstance } from './Component';
 import type { Node } from './Node';
 
 export interface Page {
@@ -5,4 +6,5 @@ export interface Page {
   title: string;
   path: string;
   nodes: Node[];
+  componentInstances?: PageComponentInstance[];
 }
