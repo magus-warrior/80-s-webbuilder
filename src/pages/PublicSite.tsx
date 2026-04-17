@@ -78,7 +78,7 @@ function PublicSiteShell({
           ) : (
             <section className="w-full overflow-hidden rounded-3xl border border-slate-900/80 bg-black/60 p-3 shadow-lg shadow-black/60 sm:p-6">
               {nodes.length ? (
-                <div className="mx-auto w-full max-w-[96rem] space-y-4 [&_*]:min-w-0 [&_a]:break-words [&_h1]:max-w-[22ch] [&_h2]:max-w-[26ch] [&_h3]:max-w-[30ch] [&_li]:max-w-[70ch] [&_p]:max-w-[70ch]">
+                <div className="mx-auto w-full max-w-[96rem] space-y-3 [&_*]:min-w-0 [&_a]:break-words [&_h1]:max-w-[22ch] [&_h2]:max-w-[26ch] [&_h3]:max-w-[30ch] [&_li]:max-w-[70ch] [&_p]:max-w-[70ch]">
                   {nodes.map((node) => (
                     <NodeRenderer key={node.id} node={node} interactive={false} />
                   ))}
