@@ -1138,7 +1138,7 @@ export default function EditorLayout({
             </div>
           </div>
           <div
-            className="relative flex-1 overflow-hidden rounded-2xl border-neon-soft p-6"
+            className="relative flex-1 overflow-y-auto overflow-x-hidden rounded-2xl border-neon-soft p-6"
             style={{
               ...cssVariables,
               backgroundColor: canvasBackgroundColor,
@@ -1161,7 +1161,7 @@ export default function EditorLayout({
                 opacity: 0.22
               }}
             />
-            <div className="relative z-10 h-full">
+            <div className="relative z-10 min-h-full">
               <div className="mb-4 flex flex-wrap gap-2 rounded-xl border border-slate-800/80 bg-black/70 p-2">
                 <span className="px-2 py-1 text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
                   Quick insert
