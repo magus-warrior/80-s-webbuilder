@@ -755,6 +755,7 @@ export default function NodeRenderer({
     setSelectedNodeId(node.id);
   };
   const isLayoutNode = layoutNodeTypes.has(resolvedNode.type);
+  const allowManualSizing = interactive && !isComponentNodeInstance && !isLayoutNode;
 
   const resolveDropIndex = (event: DragEvent<HTMLDivElement>) => {
     const childrenCount = resolvedNode.children?.length ?? 0;
@@ -843,11 +844,11 @@ export default function NodeRenderer({
       touchAction: interactive ? 'none' : undefined
     };
 
-    if (width && interactive) {
+    if (width && allowManualSizing) {
       style.width = width;
     }
 
-    if (height && interactive) {
+    if (height && allowManualSizing) {
       style.height = height;
     }
     if (!interactive || isComponentNodeInstance) {
@@ -856,7 +857,7 @@ export default function NodeRenderer({
     }
 
     return style;
-  }, [height, interactive, width, x, y]);
+  }, [allowManualSizing, height, interactive, isComponentNodeInstance, width, x, y]);
 
   useEffect(() => {
     positionRef.current = { x, y };
@@ -911,6 +912,7 @@ export default function NodeRenderer({
         }
       })
       .resizable({
+        enabled: !isLayoutNode,
         edges: {
           left: '.resize-handle-left',
           right: '.resize-handle-right',
@@ -939,7 +941,7 @@ export default function NodeRenderer({
       interactable.unset();
       interactableRef.current = null;
     };
-  }, [gridSize, interactive, isComponentNodeInstance, node.id, updateNodeProps]);
+  }, [gridSize, interactive, isComponentNodeInstance, isLayoutNode, node.id, updateNodeProps]);
 
   useEffect(() => {
     if (!interactive || isComponentNodeInstance) {
@@ -949,8 +951,8 @@ export default function NodeRenderer({
       return;
     }
     interactableRef.current.draggable({ enabled: !isEditing });
-    interactableRef.current.resizable({ enabled: !isEditing });
-  }, [interactive, isEditing]);
+    interactableRef.current.resizable({ enabled: !isEditing && !isLayoutNode });
+  }, [interactive, isEditing, isLayoutNode]);
 
   const handleEditableFocus = (event: FocusEvent<HTMLElement>) => {
     if (!interactive || isComponentNodeInstance) {
@@ -999,7 +1001,7 @@ export default function NodeRenderer({
       : undefined;
 
   const resizeHandles =
-    interactive && isSelected ? (
+    interactive && isSelected && !isEditing && !isComponentNodeInstance && !isLayoutNode ? (
       <div className="pointer-events-none absolute inset-0">
         <div className="resize-handle resize-handle-top resize-handle-left pointer-events-auto absolute left-0 top-0 h-2 w-2 -translate-x-1 -translate-y-1 border-2 border-slate-100 bg-slate-900/90" />
         <div className="resize-handle resize-handle-top resize-handle-right pointer-events-auto absolute right-0 top-0 h-2 w-2 translate-x-1 -translate-y-1 border-2 border-slate-100 bg-slate-900/90" />
