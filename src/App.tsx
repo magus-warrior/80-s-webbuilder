@@ -4,6 +4,7 @@ import type {
   Asset,
   ComponentFamily,
   Node,
+  Page,
   Project,
   ProjectAnalytics,
   ProjectSummary,
@@ -77,6 +78,11 @@ const normalizeProjectNodes = (project: Project): Project => ({
   componentFamilies: project.componentFamilies ?? [],
   pages: project.pages.map((page) => ({
     ...page,
+    backgroundColor: page.backgroundColor ?? '#020617',
+    backgroundImage: page.backgroundImage ?? '',
+    backgroundSize: page.backgroundSize ?? 'cover',
+    backgroundPosition: page.backgroundPosition ?? 'center',
+    backgroundRepeat: page.backgroundRepeat ?? 'no-repeat',
     nodes: migrateNodeTree(page.nodes ?? [])
   }))
 });
@@ -1142,6 +1148,36 @@ export default function App() {
     });
   };
 
+  const handleUpdatePageBackground = async (
+    pageId: string,
+    updates: Partial<
+      Pick<
+        Page,
+        'backgroundColor' | 'backgroundImage' | 'backgroundSize' | 'backgroundPosition' | 'backgroundRepeat'
+      >
+    >
+  ) => {
+    if (!project || !activeProjectId) {
+      return;
+    }
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => value !== undefined)
+    );
+    if (Object.keys(filteredUpdates).length === 0) {
+      return;
+    }
+    await requestProjectUpdate({
+      pageMutations: [
+        {
+          action: 'update',
+          id: pageId,
+          ...filteredUpdates
+        }
+      ],
+      updatedAt: new Date().toISOString()
+    });
+  };
+
   if (!authToken) {
     return <AuthScreen />;
   }
@@ -1200,6 +1236,7 @@ export default function App() {
           <EditorLayout
             projects={projectList}
             pages={project?.pages ?? []}
+            activePage={previewPage ?? null}
             activeProjectId={activeProjectId}
             activePageId={resolvedPageId}
             assets={assets}
@@ -1222,6 +1259,7 @@ export default function App() {
             onAddPage={handleAddPage}
             onRenamePage={handleRenamePage}
             onDeletePage={handleDeletePage}
+            onUpdatePageBackground={handleUpdatePageBackground}
             isLoadingProjects={isLoadingProjects}
           />
 

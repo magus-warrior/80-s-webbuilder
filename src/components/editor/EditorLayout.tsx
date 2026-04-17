@@ -181,6 +181,7 @@ const primitiveNodeMimeType = 'application/x-node-primitive';
 interface EditorLayoutProps {
   projects: ProjectSummary[];
   pages: Page[];
+  activePage: Page | null;
   activeProjectId: string | null;
   activePageId: string | null;
   assets: Asset[];
@@ -201,12 +202,22 @@ interface EditorLayoutProps {
   onAddPage: () => void;
   onRenamePage: (pageId: string) => void;
   onDeletePage: (pageId: string) => void;
+  onUpdatePageBackground: (
+    pageId: string,
+    updates: Partial<
+      Pick<
+        Page,
+        'backgroundColor' | 'backgroundImage' | 'backgroundSize' | 'backgroundPosition' | 'backgroundRepeat'
+      >
+    >
+  ) => void;
   isLoadingProjects?: boolean;
 }
 
 export default function EditorLayout({
   projects,
   pages,
+  activePage,
   activeProjectId,
   activePageId,
   assets,
@@ -224,6 +235,7 @@ export default function EditorLayout({
   onAddPage,
   onRenamePage,
   onDeletePage,
+  onUpdatePageBackground,
   isLoadingProjects = false
 }: EditorLayoutProps) {
   const nodes = useEditorStore((state) => state.nodes);
@@ -494,6 +506,24 @@ export default function EditorLayout({
     }
     addNode(buildNodeFromTemplate(template));
   };
+  const handlePageBackgroundUpdate = (
+    updates: Partial<
+      Pick<
+        Page,
+        'backgroundColor' | 'backgroundImage' | 'backgroundSize' | 'backgroundPosition' | 'backgroundRepeat'
+      >
+    >
+  ) => {
+    if (!activePageId) {
+      return;
+    }
+    onUpdatePageBackground(activePageId, updates);
+  };
+  const canvasBackgroundImage = activePage?.backgroundImage?.trim() ?? '';
+  const canvasBackgroundColor = activePage?.backgroundColor?.trim() || '#020617';
+  const canvasBackgroundSize = activePage?.backgroundSize ?? 'cover';
+  const canvasBackgroundPosition = activePage?.backgroundPosition ?? 'center';
+  const canvasBackgroundRepeat = activePage?.backgroundRepeat ?? 'no-repeat';
   const handleLayerDragStart = (item: LayerItem) => (event: DragEvent<HTMLDivElement>) => {
     event.dataTransfer.setData('application/x-editor-node', item.node.id);
     event.dataTransfer.setData('application/x-editor-parent', item.parentId ?? 'root');
@@ -906,6 +936,102 @@ export default function EditorLayout({
               )}
             </div>
           </div>
+          <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
+                Page background
+              </h3>
+            </div>
+            <div className="mt-3 space-y-3">
+              <label className="block text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">
+                Background color
+                <input
+                  type="text"
+                  value={activePage?.backgroundColor ?? '#020617'}
+                  onChange={(event) =>
+                    handlePageBackgroundUpdate({ backgroundColor: event.target.value })
+                  }
+                  placeholder="#020617"
+                  className="mt-2 w-full rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-1 text-xs normal-case text-slate-100"
+                />
+              </label>
+              <label className="block text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">
+                Background image URL
+                <input
+                  type="text"
+                  value={activePage?.backgroundImage ?? ''}
+                  onChange={(event) =>
+                    handlePageBackgroundUpdate({ backgroundImage: event.target.value })
+                  }
+                  placeholder="https://example.com/background.jpg"
+                  className="mt-2 w-full rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-1 text-xs normal-case text-slate-100"
+                />
+              </label>
+              <label className="block text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">
+                Image fit
+                <select
+                  value={activePage?.backgroundSize ?? 'cover'}
+                  onChange={(event) =>
+                    handlePageBackgroundUpdate({
+                      backgroundSize: event.target.value as Page['backgroundSize']
+                    })
+                  }
+                  className="mt-2 w-full rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-1 text-xs text-slate-100"
+                >
+                  <option value="cover">Cover</option>
+                  <option value="contain">Contain</option>
+                  <option value="auto">Auto</option>
+                </select>
+              </label>
+              <label className="block text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">
+                Image position
+                <input
+                  type="text"
+                  value={activePage?.backgroundPosition ?? 'center'}
+                  onChange={(event) =>
+                    handlePageBackgroundUpdate({ backgroundPosition: event.target.value })
+                  }
+                  placeholder="center"
+                  className="mt-2 w-full rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-1 text-xs normal-case text-slate-100"
+                />
+              </label>
+              <label className="block text-[0.65rem] uppercase tracking-[0.18em] text-slate-400">
+                Image repeat
+                <select
+                  value={activePage?.backgroundRepeat ?? 'no-repeat'}
+                  onChange={(event) =>
+                    handlePageBackgroundUpdate({
+                      backgroundRepeat: event.target.value as Page['backgroundRepeat']
+                    })
+                  }
+                  className="mt-2 w-full rounded-md border border-slate-700/80 bg-slate-950/80 px-2 py-1 text-xs text-slate-100"
+                >
+                  <option value="no-repeat">No repeat</option>
+                  <option value="repeat">Repeat</option>
+                  <option value="repeat-x">Repeat X</option>
+                  <option value="repeat-y">Repeat Y</option>
+                </select>
+              </label>
+              {assets.length > 0 ? (
+                <div className="space-y-1">
+                  <p className="text-[0.6rem] uppercase tracking-[0.18em] text-slate-500">Use uploaded image</p>
+                  <div className="grid gap-1">
+                    {assets.slice(0, 6).map((asset) => (
+                      <button
+                        key={asset.id}
+                        type="button"
+                        onClick={() => handlePageBackgroundUpdate({ backgroundImage: asset.url })}
+                        className="flex items-center gap-2 rounded-md border border-slate-800/80 bg-slate-950/60 px-2 py-1 text-left text-[0.65rem] text-slate-300 transition hover:border-cyan-400/60"
+                      >
+                        <img src={asset.url} alt={asset.filename} className="h-6 w-6 rounded object-cover" />
+                        <span className="truncate">{asset.filename}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-transparent bg-neon-gradient bg-clip-text">
               Blocks
@@ -1012,8 +1138,15 @@ export default function EditorLayout({
             </div>
           </div>
           <div
-            className="relative flex-1 overflow-hidden rounded-2xl border-neon-soft bg-black/80 p-6"
-            style={cssVariables}
+            className="relative flex-1 overflow-hidden rounded-2xl border-neon-soft p-6"
+            style={{
+              ...cssVariables,
+              backgroundColor: canvasBackgroundColor,
+              backgroundImage: canvasBackgroundImage ? `url("${canvasBackgroundImage}")` : undefined,
+              backgroundSize: canvasBackgroundSize,
+              backgroundPosition: canvasBackgroundPosition,
+              backgroundRepeat: canvasBackgroundRepeat
+            }}
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
             ref={canvasBoundaryRef}

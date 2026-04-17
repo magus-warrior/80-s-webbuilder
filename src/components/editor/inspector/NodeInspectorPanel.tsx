@@ -12,6 +12,44 @@ import type { ComponentOverrideField } from '../componentInstances';
 import FieldRenderer from './FieldRenderer';
 import InspectorSection from './InspectorSection';
 
+const universalStyleFields: NodeSchema['inspectorFields'] = [
+  { key: 'color', label: 'Text color', type: 'text', placeholder: '#e2e8f0', basic: true },
+  { key: 'backgroundColor', label: 'Background color', type: 'text', placeholder: '#0f172a', basic: true },
+  { key: 'background', label: 'Background (advanced)', type: 'text', placeholder: 'linear-gradient(...)', basic: false },
+  { key: 'borderColor', label: 'Border color', type: 'text', placeholder: '#334155', basic: false },
+  { key: 'borderWidth', label: 'Border width', type: 'text', placeholder: '1px', basic: false },
+  {
+    key: 'borderStyle',
+    label: 'Border style',
+    type: 'select',
+    basic: false,
+    options: [
+      { label: 'Solid', value: 'solid' },
+      { label: 'Dashed', value: 'dashed' },
+      { label: 'Dotted', value: 'dotted' },
+      { label: 'None', value: 'none' }
+    ]
+  },
+  { key: 'fontSize', label: 'Font size', type: 'text', placeholder: '16px', basic: false },
+  { key: 'fontWeight', label: 'Font weight', type: 'text', placeholder: '600', basic: false },
+  {
+    key: 'textAlign',
+    label: 'Text align',
+    type: 'select',
+    basic: false,
+    options: [
+      { label: 'Left', value: 'left' },
+      { label: 'Center', value: 'center' },
+      { label: 'Right', value: 'right' },
+      { label: 'Justify', value: 'justify' }
+    ]
+  },
+  { key: 'padding', label: 'Padding', type: 'text', placeholder: '12px', basic: false },
+  { key: 'margin', label: 'Margin', type: 'text', placeholder: '0', basic: false },
+  { key: 'borderRadius', label: 'Border radius', type: 'text', placeholder: '12px', basic: false },
+  { key: 'opacity', label: 'Opacity', type: 'range', min: 0, max: 1, step: 0.05, defaultValue: 1, basic: false }
+];
+
 interface NodeInspectorPanelProps {
   selectedNode: Node | null;
   selectedSchema: NodeSchema | null;
@@ -186,6 +224,29 @@ export default function NodeInspectorPanel({
               />
             ))
           )}
+        </div>
+      </InspectorSection>
+      <InspectorSection title="Styles" isOpen onToggle={() => undefined}>
+        <div className="mt-3 space-y-3">
+          {universalStyleFields
+            .filter((field) => (isAdvanced ? true : field.basic !== false))
+            .map((field) => (
+              <FieldRenderer
+                key={`style-${field.key}`}
+                node={selectedNode}
+                field={field}
+                assets={assets}
+                isLoadingAssets={isLoadingAssets}
+                isUploadingAsset={isUploadingAsset}
+                assetError={assetError}
+                onUploadAsset={onUploadAsset}
+                onAssetSelect={(asset, key) => {
+                  onUpdateNodeProp(selectedNode.id, key, asset.url);
+                  onUpdateNodeProp(selectedNode.id, 'alt', asset.filename);
+                }}
+                onUpdateField={(key, value) => onUpdateNodeProp(selectedNode.id, key, value)}
+              />
+            ))}
         </div>
       </InspectorSection>
     </div>

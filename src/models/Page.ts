@@ -7,4 +7,9 @@ export interface Page {
   path: string;
   nodes: Node[];
   componentInstances?: PageComponentInstance[];
+  backgroundColor?: string;
+  backgroundImage?: string;
+  backgroundSize?: 'cover' | 'contain' | 'auto';
+  backgroundPosition?: string;
+  backgroundRepeat?: 'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y';
 }
