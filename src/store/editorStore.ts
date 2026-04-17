@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { Node, NodePropValue } from '../models';
+import type { Node, NodePropValue, NodeProps } from '../models';
 
 type EditorState = {
   nodes: Node[];
@@ -63,6 +63,93 @@ const updateNodeTree = (
       children: nextChildren
     };
   });
+
+
+const parsePath = (key: string): string[] =>
+  key
+    .replace(/\[(\d+)\]/g, '.$1')
+    .split('.')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+const cloneContainer = (value: NodePropValue | NodeProps | undefined): NodePropValue | NodeProps => {
+  if (Array.isArray(value)) {
+    return [...value];
+  }
+  if (typeof value === 'object' && value !== null) {
+    return { ...value };
+  }
+  return {};
+};
+
+const setPropAtPath = (base: NodeProps, key: string, value: NodePropValue): NodeProps => {
+  const path = parsePath(key);
+  if (path.length <= 1) {
+    return {
+      ...base,
+      [key]: value
+    };
+  }
+
+  const root = { ...base } as NodeProps;
+  let current: NodePropValue | NodeProps = root;
+
+  path.forEach((segment, index) => {
+    const isLast = index === path.length - 1;
+    const nextSegment = path[index + 1];
+
+    if (Array.isArray(current)) {
+      const targetIndex = Number.parseInt(segment, 10);
+      if (Number.isNaN(targetIndex)) {
+        return;
+      }
+      if (isLast) {
+        current[targetIndex] = value;
+        return;
+      }
+      const existing = current[targetIndex];
+      const nextValue =
+        existing !== undefined
+          ? cloneContainer(existing)
+          : Number.isNaN(Number.parseInt(nextSegment ?? '', 10))
+            ? {}
+            : [];
+      current[targetIndex] = nextValue as NodePropValue;
+      current = nextValue;
+      return;
+    }
+
+    if (typeof current !== 'object' || current === null) {
+      return;
+    }
+
+    const record = current as NodeProps;
+    if (isLast) {
+      record[segment] = value;
+      return;
+    }
+
+    const existing = record[segment];
+    const nextValue =
+      existing !== undefined
+        ? cloneContainer(existing)
+        : Number.isNaN(Number.parseInt(nextSegment ?? '', 10))
+          ? {}
+          : [];
+    record[segment] = nextValue as NodePropValue;
+    current = nextValue;
+  });
+
+  return root;
+};
+
+const mergeNodeProps = (existing: NodeProps | undefined, updates: Record<string, NodePropValue>): NodeProps => {
+  let nextProps: NodeProps = { ...(existing ?? {}) };
+  Object.entries(updates).forEach(([key, value]) => {
+    nextProps = setPropAtPath(nextProps, key, value);
+  });
+  return nextProps;
+};
 
 const addNodeToTree = (nodes: Node[], containerId: string, nodeToAdd: Node): Node[] => {
   let didInsert = false;
@@ -289,10 +376,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       set((state) => ({
         nodes: updateNodeTree(state.nodes, nodeId, (node) => ({
           ...node,
-          props: {
-            ...(node.props ?? {}),
-            ...updates
-          }
+          props: mergeNodeProps(node.props, updates)
         }))
       }));
     },

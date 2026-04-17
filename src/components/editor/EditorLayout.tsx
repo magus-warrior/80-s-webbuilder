@@ -2,12 +2,11 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent 
 
 import type { Asset, Node, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
-import ColorControl from './ColorControl';
 import NodeRenderer from './NodeRenderer';
-import { getNodePropAsString, getNodeSchema } from './nodeSchemas';
+import { getNodeSchema } from './nodeSchemas';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
-import { themePresets } from './themePresets';
 import { useTheme } from './ThemeProvider';
+import NodeInspectorPanel from './inspector/NodeInspectorPanel';
 
 const findNodeById = (nodes: Node[], nodeId: string | null): Node | null => {
   if (!nodeId) {
@@ -104,117 +103,23 @@ const styleFields = [
   { label: 'Border radius', key: 'borderRadius', placeholder: '12px' }
 ];
 
-const colorFieldKeys = new Set(['color', 'background']);
-const minimalStyleFieldKeys = new Set(['color', 'background', 'padding', 'margin']);
-const minimalStyleFields = styleFields.filter((field) =>
-  minimalStyleFieldKeys.has(field.key)
-);
-
-const getStyleFieldValue = (node: Node | null, key: string): string => {
-  if (!node?.props) {
-    return '';
-  }
-  if (key === 'background') {
-    return getNodePropAsString(node, 'background') || getNodePropAsString(node, 'backgroundColor');
-  }
-  return getNodePropAsString(node, key);
-};
-
-const buildStyleFieldUpdate = (key: string, value: string): Record<string, string> => {
-  if (key === 'background') {
-    return {
-      background: value,
-      backgroundColor: value
-    };
-  }
-  return { [key]: value };
-};
-
-const styleSelectFields = [
-  {
-    label: 'Font weight',
-    key: 'fontWeight',
-    options: [
-      { label: 'Default', value: '' },
-      { label: 'Light (300)', value: '300' },
-      { label: 'Regular (400)', value: '400' },
-      { label: 'Medium (500)', value: '500' },
-      { label: 'Semibold (600)', value: '600' },
-      { label: 'Bold (700)', value: '700' }
-    ]
-  },
-  {
-    label: 'Text align',
-    key: 'textAlign',
-    options: [
-      { label: 'Default', value: '' },
-      { label: 'Left', value: 'left' },
-      { label: 'Center', value: 'center' },
-      { label: 'Right', value: 'right' },
-      { label: 'Justify', value: 'justify' }
-    ]
-  },
-  {
-    label: 'Display',
-    key: 'display',
-    options: [
-      { label: 'Default', value: '' },
-      { label: 'Block', value: 'block' },
-      { label: 'Inline block', value: 'inline-block' },
-      { label: 'Flex', value: 'flex' },
-      { label: 'Grid', value: 'grid' },
-      { label: 'None', value: 'none' }
-    ]
-  },
-  {
-    label: 'Justify content',
-    key: 'justifyContent',
-    options: [
-      { label: 'Default', value: '' },
-      { label: 'Start', value: 'flex-start' },
-      { label: 'Center', value: 'center' },
-      { label: 'End', value: 'flex-end' },
-      { label: 'Space between', value: 'space-between' },
-      { label: 'Space around', value: 'space-around' },
-      { label: 'Space evenly', value: 'space-evenly' }
-    ]
-  },
-  {
-    label: 'Align items',
-    key: 'alignItems',
-    options: [
-      { label: 'Default', value: '' },
-      { label: 'Stretch', value: 'stretch' },
-      { label: 'Start', value: 'flex-start' },
-      { label: 'Center', value: 'center' },
-      { label: 'End', value: 'flex-end' },
-      { label: 'Baseline', value: 'baseline' }
-    ]
-  }
-];
-
-const containerStyleFields = [
-  {
-    label: 'Grid columns',
-    key: 'gridTemplateColumns',
-    placeholder: 'repeat(3, minmax(0, 1fr))'
-  }
-];
-
-const layoutFields = [
-  { label: 'Width', key: 'width', placeholder: 'auto' },
-  { label: 'Height', key: 'height', placeholder: 'auto' }
-];
-
-const containerLayoutFields = [{ label: 'Gap', key: 'gap', placeholder: '12px' }];
-
 const resetStyleKeys = [
-  ...styleFields.map((field) => field.key),
+  'color',
+  'background',
+  'fontSize',
+  'padding',
+  'margin',
+  'borderRadius',
   'backgroundColor',
-  ...styleSelectFields.map((field) => field.key),
-  ...containerStyleFields.map((field) => field.key),
-  ...layoutFields.map((field) => field.key),
-  ...containerLayoutFields.map((field) => field.key)
+  'fontWeight',
+  'textAlign',
+  'display',
+  'justifyContent',
+  'alignItems',
+  'gridTemplateColumns',
+  'width',
+  'height',
+  'gap'
 ];
 
 type CanvasWidthPreset = 'narrow' | 'standard' | 'wide' | 'full';
@@ -288,15 +193,11 @@ export default function EditorLayout({
   const setGridSize = useEditorStore((state) => state.setGridSize);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
-  const { tokens, updateTokenValue, applyTokens, cssVariables } = useTheme();
+  const { cssVariables } = useTheme();
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [isCanvasCentered, setIsCanvasCentered] = useState(true);
   const [canvasWidthPreset, setCanvasWidthPreset] = useState<CanvasWidthPreset>('wide');
-  const [isThemeAdvanced, setIsThemeAdvanced] = useState(false);
-  const [preserveThemeValues, setPreserveThemeValues] = useState(false);
-  const [activePresetId, setActivePresetId] = useState<string | null>(null);
-  const [isStyleAdvanced, setIsStyleAdvanced] = useState(false);
   const [projectFormMode, setProjectFormMode] = useState<'create' | 'rename' | null>(
     null
   );
@@ -305,14 +206,6 @@ export default function EditorLayout({
     state: 'idle' | 'checking' | 'available' | 'unavailable' | 'error';
     message?: string;
   }>({ state: 'idle' });
-  const [inspectorSections, setInspectorSections] = useState({
-    text: true,
-    link: true,
-    style: true,
-    layout: false,
-    assets: false,
-    theme: false
-  });
   const canvasBoundaryRef = useRef<HTMLDivElement | null>(null);
   const projectNameTimeout = useRef<number | null>(null);
   const projectValidationRequest = useRef(0);
@@ -369,16 +262,6 @@ export default function EditorLayout({
     return projects.find((project) => project.id === activeProjectId)?.name ?? '';
   }, [activeProjectId, projects]);
   const selectedSchema = selectedNode ? getNodeSchema(selectedNode.type) : null;
-  const textField =
-    selectedSchema?.inspectorFields.find((field) => field.key === 'label') ??
-    selectedSchema?.inspectorFields.find((field) => field.key === 'content') ??
-    null;
-  const textKey = textField?.key ?? (selectedNode?.type === 'button' ? 'label' : 'content');
-  const textValue = selectedNode ? getNodePropAsString(selectedNode, textKey) : '';
-  const linkValue = selectedNode ? getNodePropAsString(selectedNode, 'href') : '';
-  const imageSourceValue = selectedNode ? getNodePropAsString(selectedNode, 'src') : '';
-  const opensInNewTab = selectedNode ? getNodePropAsString(selectedNode, 'target') === '_blank' : false;
-  const isLayoutNode = Boolean(selectedSchema?.renderHints.acceptsChildren);
   const activeCanvasWidthPreset = useMemo(
     () => canvasWidthPresets.find((preset) => preset.id === canvasWidthPreset) ?? canvasWidthPresets[2],
     [canvasWidthPreset]
@@ -387,15 +270,6 @@ export default function EditorLayout({
     const centeredClassName = isCanvasCentered ? 'mx-auto' : '';
     return `w-full space-y-4 transition-all ${centeredClassName} ${activeCanvasWidthPreset.className}`.trim();
   }, [activeCanvasWidthPreset.className, isCanvasCentered]);
-  const supportsLinks = Boolean(
-    selectedSchema?.inspectorFields.some((field) => field.key === 'href')
-  );
-  const toggleInspectorSection = (section: keyof typeof inspectorSections) => {
-    setInspectorSections((prev) => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
   const handleResetStyles = () => {
     if (!selectedNode) {
       return;
@@ -459,15 +333,6 @@ export default function EditorLayout({
     moveNodeWithinParent(sourceParent === 'root' ? null : sourceParent, sourceId, item.node.id);
     setSelectedNodeId(sourceId);
   };
-  const handleAssetSelect = (asset: Asset) => {
-    if (!selectedNode) {
-      return;
-    }
-    updateNodeProps(selectedNode.id, {
-      src: asset.url,
-      alt: asset.filename
-    });
-  };
   const handleAssetUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
@@ -489,14 +354,6 @@ export default function EditorLayout({
       return;
     }
     setGridSize(Math.max(4, Math.min(64, nextValue)));
-  };
-  const handleApplyPreset = (presetId: string) => {
-    const preset = themePresets.find((item) => item.id === presetId);
-    if (!preset) {
-      return;
-    }
-    applyTokens(preset.tokens, { preserveExistingValues: preserveThemeValues });
-    setActivePresetId(presetId);
   };
   const resetProjectForm = () => {
     setProjectFormMode(null);
@@ -1068,501 +925,24 @@ export default function EditorLayout({
               {selectedNode ? selectedNode.name : 'No selection'}
             </span>
           </div>
-          {selectedNode ? (
-            <div className="space-y-4 text-sm text-slate-200">
-              <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextName = window.prompt('Rename selected layer', selectedNode.name);
-                    if (nextName?.trim()) {
-                      updateNodeName(selectedNode.id, nextName.trim());
-                    }
-                  }}
-                  className="w-full rounded-lg border border-slate-800/90 bg-slate-950/70 px-3 py-2 text-left text-xs uppercase tracking-[0.18em] text-slate-300 transition hover:border-cyan-400/60 hover:text-slate-100"
-                >
-                  Rename layer
-                </button>
-              </div>
-              {(selectedNode.type === 'text' || selectedNode.type === 'button') && (
-                <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleInspectorSection('text')}
-                    className="flex w-full items-center justify-between text-left"
-                    aria-expanded={inspectorSections.text}
-                  >
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Text</p>
-                    <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
-                      {inspectorSections.text ? 'Collapse' : 'Expand'}
-                    </span>
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
-                      inspectorSections.text ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
-                    }`}
-                  >
-                    <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-slate-500">
-                      Content
-                    </label>
-                    <input
-                      value={textValue}
-                      onChange={(event) =>
-                        updateNodeProps(selectedNode.id, {
-                          [textKey]: event.target.value
-                        })
-                      }
-                      className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                      placeholder="Edit text"
-                    />
-                  </div>
-                </div>
-              )}
-              {supportsLinks ? (
-                <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleInspectorSection('link')}
-                    className="flex w-full items-center justify-between text-left"
-                    aria-expanded={inspectorSections.link}
-                  >
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Link</p>
-                    <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
-                      {inspectorSections.link ? 'Collapse' : 'Expand'}
-                    </span>
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
-                      inspectorSections.link ? 'max-h-[250px] opacity-100' : 'max-h-0 opacity-0'
-                    }`}
-                  >
-                    <label className="mt-3 block">
-                      <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                        URL
-                      </span>
-                      <input
-                        value={linkValue}
-                        onChange={(event) =>
-                          updateNodeProps(selectedNode.id, {
-                            href: event.target.value
-                          })
-                        }
-                        placeholder="https://example.com"
-                        className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                      />
-                    </label>
-                    <label className="mt-3 flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-slate-400">
-                      <input
-                        type="checkbox"
-                        checked={opensInNewTab}
-                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                          updateNodeProps(selectedNode.id, {
-                            target: event.target.checked ? '_blank' : '',
-                            rel: event.target.checked ? 'noopener noreferrer' : ''
-                          })
-                        }
-                        className="h-4 w-4 rounded border-slate-600 bg-slate-950/80 text-cyan-400 focus:ring-cyan-400"
-                      />
-                      Open in new tab
-                    </label>
-                  </div>
-                </div>
-              ) : null}
-              <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
-                <button
-                  type="button"
-                  onClick={() => toggleInspectorSection('style')}
-                  className="flex w-full items-center justify-between text-left"
-                  aria-expanded={inspectorSections.style}
-                >
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Style</p>
-                  <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
-                    {inspectorSections.style ? 'Collapse' : 'Expand'}
-                  </span>
-                </button>
-                <div
-                  className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
-                    inspectorSections.style
-                      ? 'max-h-[700px] opacity-100'
-                      : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  <div className="mt-3 flex items-center justify-between">
-                    <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                      Essential styles
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setIsStyleAdvanced((prev) => !prev)}
-                      className="rounded-full border border-slate-700/80 px-2 py-1 text-[0.55rem] uppercase tracking-[0.2em] text-slate-400 transition hover:border-cyan-400/60 hover:text-slate-200"
-                    >
-                      {isStyleAdvanced ? 'Hide advanced' : 'Advanced styles'}
-                    </button>
-                  </div>
-                  <div className="mt-3 space-y-3">
-                    {(isStyleAdvanced ? styleFields : minimalStyleFields).map((field) => (
-                      <div key={field.key} className="block">
-                        {colorFieldKeys.has(field.key) ? (
-                          <ColorControl
-                            label={field.label}
-                            value={getStyleFieldValue(selectedNode, field.key)}
-                            onChange={(nextValue) =>
-                              updateNodeProps(
-                                selectedNode.id,
-                                buildStyleFieldUpdate(field.key, nextValue)
-                              )
-                            }
-                          />
-                        ) : (
-                          <label className="block">
-                            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                              {field.label}
-                            </span>
-                            <input
-                              value={getStyleFieldValue(selectedNode, field.key)}
-                              onChange={(event) =>
-                                updateNodeProps(
-                                  selectedNode.id,
-                                  buildStyleFieldUpdate(field.key, event.target.value)
-                                )
-                              }
-                              placeholder={field.placeholder}
-                              className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                            />
-                          </label>
-                        )}
-                      </div>
-                    ))}
-                    {isStyleAdvanced
-                      ? styleSelectFields.map((field) => (
-                          <label key={field.key} className="block">
-                            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                              {field.label}
-                            </span>
-                            <select
-                              value={getNodePropAsString(selectedNode, field.key)}
-                              onChange={(event) =>
-                                updateNodeProps(selectedNode.id, {
-                                  [field.key]: event.target.value
-                                })
-                              }
-                              className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                            >
-                              {field.options.map((option) => (
-                                <option key={option.value || 'default'} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        ))
-                      : null}
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
-                <button
-                  type="button"
-                  onClick={() => toggleInspectorSection('layout')}
-                  className="flex w-full items-center justify-between text-left"
-                  aria-expanded={inspectorSections.layout}
-                >
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Layout</p>
-                  <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
-                    {inspectorSections.layout ? 'Collapse' : 'Expand'}
-                  </span>
-                </button>
-                <div
-                  className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
-                    inspectorSections.layout
-                      ? 'max-h-[500px] opacity-100'
-                      : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  <div className="mt-3 space-y-3">
-                    {layoutFields.map((field) => (
-                      <label key={field.key} className="block">
-                        <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                          {field.label}
-                        </span>
-                        <input
-                          value={getNodePropAsString(selectedNode, field.key)}
-                          onChange={(event) =>
-                            updateNodeProps(selectedNode.id, {
-                              [field.key]: event.target.value
-                            })
-                          }
-                          placeholder={field.placeholder}
-                          className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                        />
-                      </label>
-                    ))}
-                    {isLayoutNode
-                      ? containerLayoutFields.map((field) => (
-                          <label key={field.key} className="block">
-                            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                              {field.label}
-                            </span>
-                            <input
-                              value={getNodePropAsString(selectedNode, field.key)}
-                              onChange={(event) =>
-                                updateNodeProps(selectedNode.id, {
-                                  [field.key]: event.target.value
-                                })
-                              }
-                              placeholder={field.placeholder}
-                              className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                            />
-                          </label>
-                        ))
-                      : null}
-                    {isLayoutNode
-                      ? containerStyleFields.map((field) => (
-                          <label key={field.key} className="block">
-                            <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                              {field.label}
-                            </span>
-                            <input
-                              value={getNodePropAsString(selectedNode, field.key)}
-                              onChange={(event) =>
-                                updateNodeProps(selectedNode.id, {
-                                  [field.key]: event.target.value
-                                })
-                              }
-                              placeholder={field.placeholder}
-                              className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                            />
-                          </label>
-                        ))
-                      : null}
-                  </div>
-                </div>
-              </div>
-              {selectedNode.type === 'image' && (
-                <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleInspectorSection('assets')}
-                    className="flex w-full items-center justify-between text-left"
-                    aria-expanded={inspectorSections.assets}
-                  >
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Assets</p>
-                    <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
-                      {inspectorSections.assets ? 'Collapse' : 'Expand'}
-                    </span>
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
-                      inspectorSections.assets
-                        ? 'max-h-[600px] opacity-100'
-                        : 'max-h-0 opacity-0'
-                    }`}
-                  >
-                    <div className="mt-3 space-y-3">
-                      <label className="block">
-                        <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                          Image URL
-                        </span>
-                        <input
-                          value={imageSourceValue}
-                          onChange={(event) =>
-                            updateNodeProps(selectedNode.id, {
-                              src: event.target.value
-                            })
-                          }
-                          placeholder="https://example.com/photo.jpg"
-                          className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                          Upload image
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleAssetUpload}
-                          disabled={isUploadingAsset}
-                          className="mt-2 block w-full text-xs text-slate-300 file:mr-3 file:rounded-full file:border-0 file:bg-neon-gradient file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-950 file:shadow-lg file:neon-glow-soft disabled:opacity-60"
-                        />
-                        <span className="mt-2 block text-[0.62rem] uppercase tracking-[0.16em] text-slate-500">
-                          Uploaded photos are auto-optimized and saved to your asset pool.
-                        </span>
-                      </label>
-                      <label className="block">
-                        <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                          Alt text
-                        </span>
-                        <input
-                          value={getNodePropAsString(selectedNode, 'alt')}
-                          onChange={(event) =>
-                            updateNodeProps(selectedNode.id, {
-                              alt: event.target.value
-                            })
-                          }
-                          placeholder="Describe the image"
-                          className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                        />
-                      </label>
-                      {assetError ? (
-                        <p className="text-xs text-rose-300">Error: {assetError}</p>
-                      ) : null}
-                      {isLoadingAssets ? (
-                        <p className="text-xs text-slate-500">Loading assets...</p>
-                      ) : assets.length === 0 ? (
-                        <p className="text-xs text-slate-500">No assets uploaded yet.</p>
-                      ) : (
-                        <div className="grid gap-2">
-                          {assets.map((asset) => (
-                            <button
-                              key={asset.id}
-                              type="button"
-                              onClick={() => handleAssetSelect(asset)}
-                              className={`flex items-center gap-3 rounded-lg border px-2 py-2 text-left text-xs transition ${
-                                asset.url === getNodePropAsString(selectedNode, 'src')
-                                  ? 'border-cyan-300/70 bg-cyan-500/10 text-cyan-100'
-                                  : 'border-slate-800/80 bg-black/60 text-slate-300 hover:border-cyan-400/60'
-                              }`}
-                            >
-                              <img
-                                src={asset.url}
-                                alt={asset.filename}
-                                className="h-10 w-10 rounded-md border border-slate-800 object-cover"
-                              />
-                              <div className="min-w-0">
-                                <p className="truncate text-xs font-semibold text-slate-100">
-                                  {asset.filename}
-                                </p>
-                                <p className="text-[0.6rem] text-slate-500">
-                                  {asset.createdAt
-                                    ? new Date(asset.createdAt).toLocaleString()
-                                    : '—'}
-                                </p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
-                <button
-                  type="button"
-                  onClick={() => toggleInspectorSection('theme')}
-                  className="flex w-full items-center justify-between text-left"
-                  aria-expanded={inspectorSections.theme}
-                >
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Theme</p>
-                  <span className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-500">
-                    {inspectorSections.theme ? 'Collapse' : 'Expand'}
-                  </span>
-                </button>
-                <div
-                  className={`overflow-hidden transition-[max-height,opacity] duration-300 ${
-                    inspectorSections.theme
-                      ? 'max-h-[900px] opacity-100'
-                      : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  <div className="mt-3 flex items-center justify-between">
-                    <p className="text-xs text-slate-500">
-                      Apply a preset or fine-tune the tokens below.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setIsThemeAdvanced((prev) => !prev)}
-                      className="rounded-full border border-slate-700/80 px-2 py-1 text-[0.55rem] uppercase tracking-[0.2em] text-slate-400 transition hover:border-cyan-400/60 hover:text-slate-200"
-                    >
-                      {isThemeAdvanced ? 'Hide advanced' : 'Advanced styles'}
-                    </button>
-                  </div>
-                  <div className="mt-3 grid gap-2">
-                    {themePresets.map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handleApplyPreset(preset.id)}
-                        className={`flex flex-col rounded-lg border px-3 py-2 text-left text-xs transition ${
-                          activePresetId === preset.id
-                            ? 'border-fuchsia-300/70 bg-fuchsia-500/10 text-fuchsia-100'
-                            : 'border-slate-900/80 bg-black/60 text-slate-300 hover:border-fuchsia-400/60'
-                        }`}
-                      >
-                        <span className="text-sm font-semibold text-slate-100">
-                          {preset.name}
-                        </span>
-                        <span className="mt-1 text-[0.65rem] text-slate-500">
-                          {preset.description}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                  <label className="mt-3 flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                    <input
-                      type="checkbox"
-                      checked={preserveThemeValues}
-                      onChange={(event) => setPreserveThemeValues(event.target.checked)}
-                      className="h-4 w-4 rounded border border-slate-600 bg-slate-950/80 text-cyan-400 focus:neon-ring"
-                    />
-                    Preserve custom values
-                  </label>
-                  <div className="mt-3 space-y-3">
-                    {isThemeAdvanced ? (
-                      tokens.length > 0 ? (
-                        tokens.map((token) => (
-                          <div key={token.name} className="block">
-                            {token.category === 'color' ? (
-                              <ColorControl
-                                label={token.name}
-                                value={token.value}
-                                onChange={(nextValue) =>
-                                  updateTokenValue(token.name, nextValue)
-                                }
-                                description={token.description}
-                              />
-                            ) : (
-                              <label className="block">
-                                <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                                  {token.name}
-                                </span>
-                                <input
-                                  value={token.value}
-                                  onChange={(event) =>
-                                    updateTokenValue(token.name, event.target.value)
-                                  }
-                                  className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
-                                  placeholder={token.description ?? 'Theme token value'}
-                                />
-                                {token.description ? (
-                                  <span className="mt-2 block text-[0.65rem] text-slate-500">
-                                    {token.description}
-                                  </span>
-                                ) : null}
-                              </label>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-xs text-slate-500">
-                          No theme tokens loaded yet.
-                        </p>
-                      )
-                    ) : (
-                      <p className="text-xs text-slate-500">
-                        Advanced tokens are hidden. Toggle to edit individual values.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-slate-800/80 bg-slate-950/40 p-4 text-xs uppercase tracking-[0.2em] text-slate-400">
-              Select a node on the canvas to edit its text and styles.
-            </div>
-          )}
+          <NodeInspectorPanel
+            selectedNode={selectedNode}
+            selectedSchema={selectedSchema}
+            assets={assets}
+            isLoadingAssets={isLoadingAssets}
+            isUploadingAsset={isUploadingAsset}
+            assetError={assetError}
+            onUploadAsset={handleAssetUpload}
+            onRenameNode={(node) => {
+              const nextName = window.prompt('Rename selected layer', node.name);
+              if (nextName?.trim()) {
+                updateNodeName(node.id, nextName.trim());
+              }
+            }}
+            onUpdateNodeProp={(nodeId, key, value) => {
+              updateNodeProps(nodeId, { [key]: value });
+            }}
+          />
           <div className="mt-auto flex flex-wrap items-center gap-2">
             <button
               className="rounded-full border-neon-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-100 transition hover:brightness-110"
