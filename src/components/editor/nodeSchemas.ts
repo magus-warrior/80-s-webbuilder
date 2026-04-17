@@ -422,6 +422,89 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
       display: 'block',
       acceptsChildren: false
     }
+  },
+  form: {
+    type: 'form',
+    label: 'Form',
+    defaultName: 'Form',
+    defaultProps: asProps({
+      title: 'Contact us',
+      description: 'Use this form to collect lead details from your live page.',
+      submitLabel: 'Submit',
+      successMessage: 'Thanks — we received your submission.',
+      fields: [
+        { key: 'name', label: 'Name', type: 'text', placeholder: 'Your name', required: true },
+        { key: 'email', label: 'Email', type: 'email', placeholder: 'you@example.com', required: true },
+        { key: 'message', label: 'Message', type: 'textarea', placeholder: 'How can we help?', required: false }
+      ]
+    }),
+    inspectorFields: [
+      { key: 'title', label: 'Title', type: 'text', basic: true },
+      { key: 'description', label: 'Description', type: 'textarea', basic: true },
+      { key: 'submitLabel', label: 'Submit label', type: 'text', basic: true },
+      { key: 'successMessage', label: 'Success message', type: 'text', basic: false },
+      {
+        key: 'fields',
+        label: 'Fields',
+        type: 'repeater',
+        basic: true,
+        listItemLabel: 'Field',
+        defaultValue: [],
+        repeaterFields: [
+          { key: 'key', label: 'Key', type: 'text', defaultValue: 'field' },
+          { key: 'label', label: 'Label', type: 'text', defaultValue: 'Field label' },
+          {
+            key: 'type',
+            label: 'Type',
+            type: 'select',
+            defaultValue: 'text',
+            options: [
+              { label: 'Text', value: 'text' },
+              { label: 'Email', value: 'email' },
+              { label: 'Tel', value: 'tel' },
+              { label: 'Textarea', value: 'textarea' }
+            ]
+          },
+          { key: 'placeholder', label: 'Placeholder', type: 'text', defaultValue: '' },
+          { key: 'required', label: 'Required', type: 'toggle', defaultValue: false }
+        ]
+      }
+    ],
+    renderHints: {
+      display: 'block',
+      acceptsChildren: false
+    }
+  },
+  poll: {
+    type: 'poll',
+    label: 'Poll',
+    defaultName: 'Poll',
+    defaultProps: asProps({
+      question: 'Which launch channel should we prioritize?',
+      submitLabel: 'Vote',
+      options: [
+        { label: 'Email campaign' },
+        { label: 'Creator partnership' },
+        { label: 'Paid social' }
+      ]
+    }),
+    inspectorFields: [
+      { key: 'question', label: 'Question', type: 'textarea', basic: true },
+      { key: 'submitLabel', label: 'Button label', type: 'text', basic: true },
+      {
+        key: 'options',
+        label: 'Options',
+        type: 'repeater',
+        basic: true,
+        listItemLabel: 'Option',
+        defaultValue: [],
+        repeaterFields: [{ key: 'label', label: 'Label', type: 'text', defaultValue: 'Option' }]
+      }
+    ],
+    renderHints: {
+      display: 'block',
+      acceptsChildren: false
+    }
   }
 };
 

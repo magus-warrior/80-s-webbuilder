@@ -31,6 +31,7 @@ MAX_PROJECT_DESCRIPTION_LENGTH = 280
 COMPRESSIBLE_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
 MAX_IMAGE_DIMENSION = 1920
 WEBP_QUALITY = 82
+MAX_ANALYTICS_EVENTS = 5000
 
 app.include_router(auth_router)
 
@@ -634,6 +635,133 @@ def coerce_project_data(project: Project) -> dict[str, Any]:
     return {}
 
 
+def ensure_project_analytics(data: dict[str, Any]) -> dict[str, Any]:
+    analytics = data.get("analytics")
+    if not isinstance(analytics, dict):
+        analytics = {}
+
+    summary = analytics.get("summary")
+    if not isinstance(summary, dict):
+        summary = {}
+
+    by_node = analytics.get("byNode")
+    if not isinstance(by_node, dict):
+        by_node = {}
+
+    events = analytics.get("events")
+    if not isinstance(events, list):
+        events = []
+
+    normalized = {
+        "summary": {
+            "pageViews": int(summary.get("pageViews", 0) or 0),
+            "formSubmissions": int(summary.get("formSubmissions", 0) or 0),
+            "pollVotes": int(summary.get("pollVotes", 0) or 0),
+        },
+        "byNode": by_node,
+        "events": events[-MAX_ANALYTICS_EVENTS:],
+        "updatedAt": analytics.get("updatedAt"),
+    }
+    data["analytics"] = normalized
+    return normalized
+
+
+def sanitize_event_payload(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    sanitized: dict[str, Any] = {}
+    for key, value in payload.items():
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            sanitized[key] = value
+            continue
+        if isinstance(value, list):
+            sanitized[key] = [
+                entry
+                for entry in value
+                if isinstance(entry, (str, int, float, bool)) or entry is None
+            ][:30]
+    return sanitized
+
+
+def append_project_event(project: Project, event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+    data = coerce_project_data(project)
+    analytics = ensure_project_analytics(data)
+    timestamp = datetime.now(timezone.utc).isoformat()
+    node_id = str(payload.get("nodeId") or "unknown")
+
+    if event_type == "page_view":
+        analytics["summary"]["pageViews"] = int(analytics["summary"]["pageViews"]) + 1
+    elif event_type == "form_submit":
+        analytics["summary"]["formSubmissions"] = int(analytics["summary"]["formSubmissions"]) + 1
+    elif event_type == "poll_vote":
+        analytics["summary"]["pollVotes"] = int(analytics["summary"]["pollVotes"]) + 1
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported analytics event type")
+
+    by_node = analytics["byNode"]
+    node_entry = by_node.get(node_id)
+    if not isinstance(node_entry, dict):
+        node_entry = {}
+    node_entry["type"] = payload.get("nodeType", node_entry.get("type") or "unknown")
+    node_entry["name"] = payload.get("nodeName", node_entry.get("name") or "Untitled node")
+    node_entry["views"] = int(node_entry.get("views", 0) or 0)
+    node_entry["submissions"] = int(node_entry.get("submissions", 0) or 0)
+    node_entry["votes"] = int(node_entry.get("votes", 0) or 0)
+    if event_type == "page_view":
+        node_entry["views"] += 1
+    elif event_type == "form_submit":
+        node_entry["submissions"] += 1
+    elif event_type == "poll_vote":
+        node_entry["votes"] += 1
+    by_node[node_id] = node_entry
+
+    events = analytics["events"]
+    events.append(
+        {
+            "id": uuid.uuid4().hex,
+            "eventType": event_type,
+            "createdAt": timestamp,
+            "nodeId": node_id,
+            "nodeType": payload.get("nodeType"),
+            "nodeName": payload.get("nodeName"),
+            "payload": sanitize_event_payload(payload),
+        }
+    )
+    analytics["events"] = events[-MAX_ANALYTICS_EVENTS:]
+    analytics["updatedAt"] = timestamp
+    project.data = data
+    return analytics
+
+
+def serialize_analytics(project: Project) -> dict[str, Any]:
+    data = coerce_project_data(project)
+    analytics = ensure_project_analytics(data)
+    by_node = analytics.get("byNode")
+    sorted_nodes = []
+    if isinstance(by_node, dict):
+        sorted_nodes = sorted(
+            [
+                {
+                    "nodeId": node_id,
+                    "type": entry.get("type"),
+                    "name": entry.get("name"),
+                    "views": int(entry.get("views", 0) or 0),
+                    "submissions": int(entry.get("submissions", 0) or 0),
+                    "votes": int(entry.get("votes", 0) or 0),
+                }
+                for node_id, entry in by_node.items()
+                if isinstance(entry, dict)
+            ],
+            key=lambda item: item["views"] + item["submissions"] + item["votes"],
+            reverse=True,
+        )
+    return {
+        "summary": analytics.get("summary", {}),
+        "byNode": sorted_nodes,
+        "updatedAt": analytics.get("updatedAt"),
+    }
+
+
 @app.get("/projects/{project_id}/public-slug/validate")
 def validate_public_slug(
     project_id: int,
@@ -697,6 +825,47 @@ def get_public_project(
         raise HTTPException(status_code=404, detail="Project not found")
     response.headers.update(no_cache_headers())
     return serialize_project(project)
+
+
+@app.post("/api/public/{slug}/events")
+def track_public_project_event(
+    slug: str,
+    response: Response,
+    payload: dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    project = (
+        db.query(Project)
+        .filter(Project.public_slug == slug, Project.is_published.is_(True))
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    event_type = str(payload.get("eventType") or "").strip().lower()
+    analytics = append_project_event(project, event_type, payload)
+    db.commit()
+    response.headers.update(no_cache_headers())
+    return {
+        "ok": True,
+        "summary": analytics.get("summary", {}),
+        "updatedAt": analytics.get("updatedAt"),
+    }
+
+
+@app.get("/projects/{project_id}/analytics")
+def get_project_analytics(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.owner_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return serialize_analytics(project)
 
 
 @app.get("/sample-project.json", response_model=None)

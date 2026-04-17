@@ -833,7 +833,7 @@ export default function EditorLayout({
               Blocks
             </h3>
             <span className="rounded-full border border-slate-700 px-2 py-1 text-[0.65rem] text-slate-300">
-              12 items
+              {blockTemplates.length} items
             </span>
           </div>
           <div className="space-y-3">
@@ -934,7 +934,7 @@ export default function EditorLayout({
                   <p className="text-sm">Drop components here to start building.</p>
                   <button
                     type="button"
-                    onClick={() => handleAddBlock('Hero')}
+                    onClick={() => handleAddBlock('HeroCentered')}
                     className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 neon-glow-soft"
                   >
                     Add section

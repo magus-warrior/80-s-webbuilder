@@ -126,12 +126,50 @@ const pricingMatrix: NodeTemplate = {
   }))
 };
 
+const leadCaptureForm: NodeTemplate = {
+  type: 'card',
+  name: 'Lead Capture',
+  props: { gap: '14px' },
+  children: [
+    { type: 'text', name: 'Form Eyebrow', props: { content: 'Get in touch', color: 'var(--theme-text-muted, #94a3b8)' } },
+    {
+      type: 'form',
+      name: 'Contact Form',
+      props: {
+        title: 'Request a demo',
+        description: 'Tell us what you are building and we will follow up.',
+        submitLabel: 'Request Demo'
+      }
+    }
+  ]
+};
+
+const audiencePoll: NodeTemplate = {
+  type: 'card',
+  name: 'Audience Poll',
+  props: { gap: '10px' },
+  children: [
+    { type: 'text', name: 'Poll Label', props: { content: 'Quick poll', color: 'var(--theme-text-muted, #94a3b8)' } },
+    {
+      type: 'poll',
+      name: 'Feature Poll',
+      props: {
+        question: 'Which feature should we ship first?',
+        submitLabel: 'Cast vote',
+        options: [{ label: 'Advanced analytics' }, { label: 'New templates' }, { label: 'Custom domains' }]
+      }
+    }
+  ]
+};
+
 export const templatePresets: Record<string, NodeTemplate> = {
   HeroCentered: primaryHero,
   HeroSplit: splitHero,
   FeatureRow: featureRow,
   GalleryStrip: galleryStrip,
-  PricingMatrix: pricingMatrix
+  PricingMatrix: pricingMatrix,
+  LeadCaptureForm: leadCaptureForm,
+  AudiencePoll: audiencePoll
 };
 
 export const blockTemplates = [
@@ -139,5 +177,7 @@ export const blockTemplates = [
   { key: 'HeroSplit', label: 'Hero (Split)', template: templatePresets.HeroSplit },
   { key: 'FeatureRow', label: 'Feature Row', template: templatePresets.FeatureRow },
   { key: 'GalleryStrip', label: 'Gallery Strip', template: templatePresets.GalleryStrip },
-  { key: 'PricingMatrix', label: 'Pricing Matrix', template: templatePresets.PricingMatrix }
+  { key: 'PricingMatrix', label: 'Pricing Matrix', template: templatePresets.PricingMatrix },
+  { key: 'LeadCaptureForm', label: 'Lead Capture Form', template: templatePresets.LeadCaptureForm },
+  { key: 'AudiencePoll', label: 'Audience Poll', template: templatePresets.AudiencePoll }
 ];

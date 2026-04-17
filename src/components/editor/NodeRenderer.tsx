@@ -21,6 +21,7 @@ type NodeRendererProps = {
   parentId?: string | null;
   interactive?: boolean;
   disableVisualStyles?: boolean;
+  publicSlug?: string | null;
 };
 
 const stylePropHandlers: Record<
@@ -207,7 +208,8 @@ const resolveLayoutStyle = (
 const renderChildren = (
   node: Node,
   interactive: boolean,
-  disableVisualStyles: boolean
+  disableVisualStyles: boolean,
+  publicSlug?: string | null
 ) =>
   node.children?.map((child) => (
     <NodeRenderer
@@ -216,6 +218,7 @@ const renderChildren = (
       parentId={node.id}
       interactive={interactive}
       disableVisualStyles={disableVisualStyles}
+      publicSlug={publicSlug}
     />
   )) ?? null;
 
@@ -361,7 +364,8 @@ const renderLayoutNode = (
   interactive: boolean,
   tokenMap: Record<string, string>,
   disableVisualStyles: boolean,
-  as: 'div' | 'section' = 'div'
+  as: 'div' | 'section' = 'div',
+  publicSlug?: string | null
 ) => {
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles, interactive);
   if (!interactive) {
@@ -387,17 +391,232 @@ const renderLayoutNode = (
   if (as === 'section') {
     return (
       <section style={style} className={className}>
-        {renderChildren(node, interactive, disableVisualStyles)}
+        {renderChildren(node, interactive, disableVisualStyles, publicSlug)}
       </section>
     );
   }
 
   return (
     <div style={style} className={className}>
-      {renderChildren(node, interactive, disableVisualStyles)}
+      {renderChildren(node, interactive, disableVisualStyles, publicSlug)}
     </div>
   );
 };
+
+const normalizeFieldKey = (value: string, fallback: string) => {
+  const normalized = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  return normalized || fallback;
+};
+
+const readItems = (value: unknown): Array<Record<string, unknown>> =>
+  Array.isArray(value)
+    ? value.filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
+    : [];
+
+const trackPublicEvent = async (
+  publicSlug: string | null | undefined,
+  payload: Record<string, unknown>
+) => {
+  if (!publicSlug?.trim()) {
+    return;
+  }
+  try {
+    await fetch(`/api/public/${encodeURIComponent(publicSlug)}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch {
+    // Avoid blocking interactions on tracking failures.
+  }
+};
+
+type InteractionNodeViewProps = {
+  node: Node;
+  interactive: boolean;
+  tokenMap: Record<string, string>;
+  disableVisualStyles: boolean;
+  publicSlug?: string | null;
+};
+
+function FormNodeView({
+  node,
+  interactive,
+  tokenMap,
+  disableVisualStyles,
+  publicSlug
+}: InteractionNodeViewProps) {
+  const fields = readItems(node.props?.fields);
+  const title = getNodePropAsString(node, 'title') || node.name;
+  const description = getNodePropAsString(node, 'description');
+  const submitLabel = getNodePropAsString(node, 'submitLabel') || 'Submit';
+  const successMessage = getNodePropAsString(node, 'successMessage') || 'Thanks for submitting.';
+  const [message, setMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    if (interactive) {
+      event.preventDefault();
+      setMessage('Form submits only on live pages.');
+      return;
+    }
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const values = fields.reduce<Record<string, string>>((acc, field, index) => {
+      const key = normalizeFieldKey(String(field.key ?? ''), `field_${index + 1}`);
+      const value = formData.get(key);
+      acc[key] = typeof value === 'string' ? value : '';
+      return acc;
+    }, {});
+    setIsSubmitting(true);
+    setMessage(null);
+    await trackPublicEvent(publicSlug, {
+      eventType: 'form_submit',
+      nodeId: node.id,
+      nodeType: node.type,
+      nodeName: node.name,
+      values
+    });
+    setIsSubmitting(false);
+    setMessage(successMessage);
+    event.currentTarget.reset();
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      style={resolveNodeStyles(node, tokenMap, disableVisualStyles, interactive)}
+      className="w-full rounded-2xl border border-slate-800/80 bg-black/50 p-4"
+    >
+      <h3 className="text-base font-semibold text-slate-100">{title}</h3>
+      {description ? <p className="mt-1 text-sm text-slate-300">{description}</p> : null}
+      <div className="mt-4 space-y-3">
+        {fields.map((field, index) => {
+          const fieldLabel = String(field.label ?? `Field ${index + 1}`);
+          const fieldType = String(field.type ?? 'text').toLowerCase();
+          const key = normalizeFieldKey(String(field.key ?? ''), `field_${index + 1}`);
+          const required = Boolean(field.required);
+          const placeholder = String(field.placeholder ?? '');
+          return (
+            <label key={`${node.id}-${key}-${index}`} className="block text-xs uppercase tracking-[0.18em] text-slate-400">
+              {fieldLabel}
+              {fieldType === 'textarea' ? (
+                <textarea
+                  name={key}
+                  required={required}
+                  placeholder={placeholder}
+                  rows={4}
+                  className="mt-2 w-full rounded-lg border border-slate-700/80 bg-black/70 px-3 py-2 text-sm normal-case text-slate-100 focus:border-cyan-200 focus:outline-none"
+                />
+              ) : (
+                <input
+                  type={fieldType === 'email' || fieldType === 'tel' ? fieldType : 'text'}
+                  name={key}
+                  required={required}
+                  placeholder={placeholder}
+                  className="mt-2 w-full rounded-lg border border-slate-700/80 bg-black/70 px-3 py-2 text-sm normal-case text-slate-100 focus:border-cyan-200 focus:outline-none"
+                />
+              )}
+            </label>
+          );
+        })}
+      </div>
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="mt-4 rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 disabled:opacity-60"
+      >
+        {isSubmitting ? 'Sending...' : submitLabel}
+      </button>
+      {message ? <p className="mt-3 text-xs text-cyan-200">{message}</p> : null}
+    </form>
+  );
+}
+
+function PollNodeView({
+  node,
+  interactive,
+  tokenMap,
+  disableVisualStyles,
+  publicSlug
+}: InteractionNodeViewProps) {
+  const question = getNodePropAsString(node, 'question') || node.name;
+  const submitLabel = getNodePropAsString(node, 'submitLabel') || 'Vote';
+  const options = readItems(node.props?.options)
+    .map((option, index) => ({
+      id: `${node.id}-${index}`,
+      label: String(option.label ?? `Option ${index + 1}`)
+    }))
+    .filter((entry) => entry.label.trim().length > 0);
+  const [selectedOption, setSelectedOption] = useState<string>('');
+  const [message, setMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const localVoteKey = `poll-voted:${publicSlug ?? 'preview'}:${node.id}`;
+  const hasVoted = !interactive && typeof window !== 'undefined' && window.localStorage.getItem(localVoteKey) === '1';
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (interactive) {
+      setMessage('Poll voting is available on live pages.');
+      return;
+    }
+    if (!selectedOption) {
+      setMessage('Choose an option first.');
+      return;
+    }
+    if (hasVoted) {
+      setMessage('This browser already voted on this poll.');
+      return;
+    }
+    setIsSubmitting(true);
+    setMessage(null);
+    await trackPublicEvent(publicSlug, {
+      eventType: 'poll_vote',
+      nodeId: node.id,
+      nodeType: node.type,
+      nodeName: node.name,
+      option: selectedOption
+    });
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(localVoteKey, '1');
+    }
+    setIsSubmitting(false);
+    setMessage('Vote counted. Thank you!');
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      style={resolveNodeStyles(node, tokenMap, disableVisualStyles, interactive)}
+      className="w-full rounded-2xl border border-slate-800/80 bg-black/50 p-4"
+    >
+      <p className="text-sm font-semibold text-slate-100">{question}</p>
+      <div className="mt-3 space-y-2">
+        {options.map((option) => (
+          <label key={option.id} className="flex items-center gap-2 text-sm text-slate-200">
+            <input
+              type="radio"
+              name={`poll-${node.id}`}
+              value={option.label}
+              checked={selectedOption === option.label}
+              onChange={(event) => setSelectedOption(event.target.value)}
+              disabled={hasVoted}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+      <button
+        type="submit"
+        disabled={isSubmitting || hasVoted}
+        className="mt-4 rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 disabled:opacity-60"
+      >
+        {isSubmitting ? 'Saving...' : hasVoted ? 'Already voted' : submitLabel}
+      </button>
+      {message ? <p className="mt-3 text-xs text-cyan-200">{message}</p> : null}
+    </form>
+  );
+}
 
 const nodeRenderers: Partial<
   Record<
@@ -407,27 +626,44 @@ const nodeRenderers: Partial<
       interactive: boolean,
       tokenMap: Record<string, string>,
       disableVisualStyles: boolean,
-      editableProps?: HTMLAttributes<HTMLElement>
+      editableProps?: HTMLAttributes<HTMLElement>,
+      publicSlug?: string | null
     ) => JSX.Element
   >
 > = {
   text: renderTextNode,
   button: renderButtonNode,
   image: renderImageNode,
-  container: (node, interactive, tokenMap, disableVisualStyles) =>
-    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles),
-  section: (node, interactive, tokenMap, disableVisualStyles) =>
-    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles, 'section'),
-  stack: (node, interactive, tokenMap, disableVisualStyles) =>
-    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles),
-  row: (node, interactive, tokenMap, disableVisualStyles) =>
-    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles),
-  column: (node, interactive, tokenMap, disableVisualStyles) =>
-    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles),
-  grid: (node, interactive, tokenMap, disableVisualStyles) =>
-    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles),
-  card: (node, interactive, tokenMap, disableVisualStyles) =>
-    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles)
+  container: (node, interactive, tokenMap, disableVisualStyles, _editableProps, publicSlug) =>
+    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles, 'div', publicSlug),
+  section: (node, interactive, tokenMap, disableVisualStyles, _editableProps, publicSlug) =>
+    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles, 'section', publicSlug),
+  stack: (node, interactive, tokenMap, disableVisualStyles, _editableProps, publicSlug) =>
+    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles, 'div', publicSlug),
+  row: (node, interactive, tokenMap, disableVisualStyles, _editableProps, publicSlug) =>
+    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles, 'div', publicSlug),
+  column: (node, interactive, tokenMap, disableVisualStyles, _editableProps, publicSlug) =>
+    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles, 'div', publicSlug),
+  grid: (node, interactive, tokenMap, disableVisualStyles, _editableProps, publicSlug) =>
+    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles, 'div', publicSlug),
+  card: (node, interactive, tokenMap, disableVisualStyles, _editableProps, publicSlug) =>
+    renderLayoutNode(node, interactive, tokenMap, disableVisualStyles, 'div', publicSlug),
+  form: (node, interactive, tokenMap, disableVisualStyles, _editableProps, publicSlug) =>
+    <FormNodeView
+      node={node}
+      interactive={interactive}
+      tokenMap={tokenMap}
+      disableVisualStyles={disableVisualStyles}
+      publicSlug={publicSlug}
+    />,
+  poll: (node, interactive, tokenMap, disableVisualStyles, _editableProps, publicSlug) =>
+    <PollNodeView
+      node={node}
+      interactive={interactive}
+      tokenMap={tokenMap}
+      disableVisualStyles={disableVisualStyles}
+      publicSlug={publicSlug}
+    />
 };
 
 const parseLength = (value?: string) => {
@@ -457,7 +693,8 @@ export default function NodeRenderer({
   node,
   parentId = null,
   interactive = true,
-  disableVisualStyles = false
+  disableVisualStyles = false,
+  publicSlug = null
 }: NodeRendererProps) {
   const componentFamilies = useEditorStore((state) => state.componentFamilies);
   const resolvedNode = useMemo(() => {
@@ -803,7 +1040,8 @@ export default function NodeRenderer({
           interactive && !isComponentNodeInstance,
           tokenMap,
           disableVisualStyles,
-          editableProps
+          editableProps,
+          publicSlug
         )}
         {insertionIndicator}
         {layoutSlotDropZones}
@@ -838,7 +1076,12 @@ export default function NodeRenderer({
     >
       <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{resolvedNode.type}</div>
       <p className="mt-2 text-sm text-slate-200">{resolvedNode.name}</p>
-      {renderChildren(resolvedNode, interactive && !isComponentNodeInstance, disableVisualStyles)}
+      {renderChildren(
+        resolvedNode,
+        interactive && !isComponentNodeInstance,
+        disableVisualStyles,
+        publicSlug
+      )}
       {resizeHandles}
     </div>
   );

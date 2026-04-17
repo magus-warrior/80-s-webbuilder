@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
-import type { Asset, ComponentFamily, Node, Project, ProjectSummary, ThemeToken } from './models';
+import type {
+  Asset,
+  ComponentFamily,
+  Node,
+  Project,
+  ProjectAnalytics,
+  ProjectSummary,
+  ThemeToken
+} from './models';
 import AuthScreen from './components/auth/AuthScreen';
 import EditorLayout from './components/editor/EditorLayout';
 import RenderedNodesPreview from './components/editor/RenderedNodesPreview';
@@ -92,6 +100,7 @@ export default function App() {
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
   const [isUploadingAsset, setIsUploadingAsset] = useState(false);
   const [assetError, setAssetError] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<ProjectAnalytics | null>(null);
   const authToken = useAuthStore((state) => state.token);
   const authEmail = useAuthStore((state) => state.email);
   const clearAuth = useAuthStore((state) => state.clearAuth);
@@ -570,6 +579,28 @@ export default function App() {
 
     void loadAssets();
   }, [authToken, activeProjectId]);
+
+  useEffect(() => {
+    if (!authToken || !activeProjectId) {
+      setAnalytics(null);
+      return;
+    }
+    const loadAnalytics = async () => {
+      try {
+        const response = await fetch(`/projects/${activeProjectId}/analytics`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (!response.ok) {
+          return;
+        }
+        const data = (await response.json()) as ProjectAnalytics;
+        setAnalytics(data);
+      } catch {
+        setAnalytics(null);
+      }
+    };
+    void loadAnalytics();
+  }, [activeProjectId, authToken, project?.updatedAt]);
 
   useEffect(() => {
     if (!authToken || !activeProjectId) {
@@ -1229,6 +1260,14 @@ export default function App() {
                 <p className="mt-2 text-sm text-slate-200">
                   {project ? new Date(project.updatedAt).toLocaleString() : '—'}
                 </p>
+                {analytics?.updatedAt ? (
+                  <>
+                    <p className="mt-3 text-xs uppercase tracking-[0.2em] text-slate-400">Analytics updated</p>
+                    <p className="mt-1 text-sm text-slate-200">
+                      {new Date(analytics.updatedAt).toLocaleString()}
+                    </p>
+                  </>
+                ) : null}
               </div>
             </div>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-900/80 bg-black/60 px-6 py-4">
@@ -1317,6 +1356,61 @@ export default function App() {
                   </button>
                 )}
               </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-900/80 bg-black/60 px-6 py-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Public Analytics</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                  <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">Page views</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-100">
+                    {analytics?.summary?.pageViews ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                  <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">Form submissions</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-100">
+                    {analytics?.summary?.formSubmissions ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                  <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">Poll votes</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-100">
+                    {analytics?.summary?.pollVotes ?? 0}
+                  </p>
+                </div>
+              </div>
+              {analytics?.byNode?.length ? (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full text-left text-xs text-slate-300">
+                    <thead className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                      <tr>
+                        <th className="px-2 py-1">Element</th>
+                        <th className="px-2 py-1">Type</th>
+                        <th className="px-2 py-1">Views</th>
+                        <th className="px-2 py-1">Submissions</th>
+                        <th className="px-2 py-1">Votes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.byNode.slice(0, 8).map((entry) => (
+                        <tr key={entry.nodeId} className="border-t border-slate-800/60">
+                          <td className="px-2 py-1">{entry.name ?? entry.nodeId}</td>
+                          <td className="px-2 py-1 uppercase tracking-[0.12em] text-slate-500">
+                            {entry.type ?? 'node'}
+                          </td>
+                          <td className="px-2 py-1">{entry.views}</td>
+                          <td className="px-2 py-1">{entry.submissions}</td>
+                          <td className="px-2 py-1">{entry.votes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-slate-400">
+                  No interaction events yet. Publish and share your page to start collecting data.
+                </p>
+              )}
             </div>
             {project ? (
               <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
