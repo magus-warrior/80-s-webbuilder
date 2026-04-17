@@ -385,6 +385,7 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
       alt: 'Image',
       width: '100%',
       borderRadius: '12px',
+      showOutline: true,
       loading: 'lazy',
       tags: []
     }),
@@ -397,6 +398,13 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
         basic: true
       },
       { key: 'alt', label: 'Alt text', type: 'text', basic: true },
+      {
+        key: 'showOutline',
+        label: 'Show outline',
+        type: 'toggle',
+        defaultValue: true,
+        basic: true
+      },
       { key: 'caption', label: 'Caption', type: 'textarea', basic: false },
       {
         key: 'loading',
