@@ -78,6 +78,17 @@ const buildLayerItems = (
     ...(node.children ? buildLayerItems(node.children, depth + 1, node.id) : [])
   ]);
 
+const layoutNodeTypes = new Set<Node['type']>([
+  'container',
+  'stack',
+  'row',
+  'column',
+  'grid',
+  'card',
+  'section',
+  'form'
+]);
+
 const layerTypeBadgeMap: Record<string, { label: string; icon?: string }> = {
   section: { label: 'Section', icon: '▦' },
   container: { label: 'Container', icon: '▣' },
@@ -217,6 +228,7 @@ export default function EditorLayout({
   const updateNodeName = useEditorStore((state) => state.updateNodeName);
   const removeNode = useEditorStore((state) => state.removeNode);
   const addNode = useEditorStore((state) => state.addNode);
+  const addNodeToContainer = useEditorStore((state) => state.addNodeToContainer);
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const moveNodeWithinParent = useEditorStore((state) => state.moveNodeWithinParent);
   const gridSize = useEditorStore((state) => state.gridSize);
@@ -406,16 +418,23 @@ export default function EditorLayout({
     const resetPayload = Object.fromEntries(resetStyleKeys.map((key) => [key, '']));
     updateNodeProps(selectedNode.id, resetPayload);
   };
+  const addNodeToBestTarget = (node: Node) => {
+    if (selectedNode && layoutNodeTypes.has(selectedNode.type)) {
+      addNodeToContainer(selectedNode.id, node);
+      return;
+    }
+    addNode(node);
+  };
   const handleAddBlock = (templateName: string) => {
     const template = blockTemplates.find((item) => item.key === templateName)?.template;
     if (!template) {
       return;
     }
-    addNode(buildNodeFromTemplate(template));
+    addNodeToBestTarget(buildNodeFromTemplate(template));
   };
   const handleAddPrimitive = (type: Node['type']) => {
     const schema = getNodeSchema(type);
-    addNode(
+    addNodeToBestTarget(
       buildNodeFromTemplate({
         type,
         name: schema?.defaultName ?? type,
