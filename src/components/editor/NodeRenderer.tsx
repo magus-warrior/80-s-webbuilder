@@ -850,7 +850,11 @@ export default function NodeRenderer({
     if (height && allowManualSizing) {
       style.height = height;
     }
-    if (!interactive || isComponentNodeInstance) {
+    if (!interactive) {
+      style.maxWidth = '100%';
+    }
+
+    if (isComponentNodeInstance) {
       style.maxWidth = '100%';
       style.transform = undefined;
     }
