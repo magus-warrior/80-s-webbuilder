@@ -143,6 +143,26 @@ const canvasWidthPresets: Array<{
   { id: 'full', label: 'Full', className: 'max-w-none' }
 ];
 
+const starterTemplateKeys = ['HeroCentered', 'FeatureRow', 'PricingMatrix'] as const;
+const quickTemplateKeys = [
+  'HeroCentered',
+  'HeroSplit',
+  'FeatureRow',
+  'GalleryStrip',
+  'PricingMatrix',
+  'LeadCaptureForm',
+  'AudiencePoll'
+] as const;
+const primitiveNodes: Array<{ type: Node['type']; label: string }> = [
+  { type: 'section', label: 'Section' },
+  { type: 'row', label: 'Row' },
+  { type: 'column', label: 'Column' },
+  { type: 'card', label: 'Card' },
+  { type: 'text', label: 'Text' },
+  { type: 'button', label: 'Button' },
+  { type: 'image', label: 'Image' }
+];
+
 interface EditorLayoutProps {
   projects: ProjectSummary[];
   pages: Page[];
@@ -392,6 +412,16 @@ export default function EditorLayout({
       return;
     }
     addNode(buildNodeFromTemplate(template));
+  };
+  const handleAddPrimitive = (type: Node['type']) => {
+    const schema = getNodeSchema(type);
+    addNode(
+      buildNodeFromTemplate({
+        type,
+        name: schema?.defaultName ?? type,
+        props: schema?.defaultProps ?? {}
+      })
+    );
   };
   const handleBlockDragStart = (templateName: string) => (event: DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.setData('application/x-block-template', templateName);
@@ -836,6 +866,26 @@ export default function EditorLayout({
               {blockTemplates.length} items
             </span>
           </div>
+          <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3 text-xs text-cyan-100">
+            Click any block to add instantly. Drag/drop is optional.
+          </div>
+          <div className="rounded-xl border border-slate-900/80 bg-black/60 p-3">
+            <h4 className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-300">
+              Structure primitives
+            </h4>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {primitiveNodes.map((item) => (
+                <button
+                  key={item.type}
+                  type="button"
+                  onClick={() => handleAddPrimitive(item.type)}
+                  className="rounded-lg border border-slate-800/80 bg-black/70 px-2 py-1.5 text-left text-xs text-slate-200 transition hover:border-cyan-400/60 hover:text-cyan-100"
+                >
+                  + {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="space-y-3">
             {blockTemplates.map((block) => (
               <button
@@ -852,7 +902,7 @@ export default function EditorLayout({
             ))}
           </div>
           <div className="mt-auto rounded-xl border border-slate-900/80 bg-black/60 p-3 text-xs text-slate-300">
-            Tip: Drag blocks onto the canvas or into containers to nest layouts.
+            Tip: Drag blocks onto the canvas or into containers when you need precise placement.
           </div>
         </aside>
 
@@ -929,16 +979,51 @@ export default function EditorLayout({
               }}
             />
             <div className="relative z-10 h-full">
+              <div className="mb-4 flex flex-wrap gap-2 rounded-xl border border-slate-800/80 bg-black/70 p-2">
+                <span className="px-2 py-1 text-[0.6rem] uppercase tracking-[0.2em] text-slate-400">
+                  Quick insert
+                </span>
+                {quickTemplateKeys.map((key) => {
+                  const block = blockTemplates.find((item) => item.key === key);
+                  if (!block) {
+                    return null;
+                  }
+                  return (
+                    <button
+                      key={block.key}
+                      type="button"
+                      onClick={() => handleAddBlock(block.key)}
+                      className="rounded-full border border-slate-700/80 px-3 py-1 text-[0.65rem] uppercase tracking-[0.15em] text-slate-200 transition hover:border-cyan-400/60 hover:text-cyan-100"
+                    >
+                      + {block.label}
+                    </button>
+                  );
+                })}
+              </div>
               {nodes.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-300">
-                  <p className="text-sm">Drop components here to start building.</p>
-                  <button
-                    type="button"
-                    onClick={() => handleAddBlock('HeroCentered')}
-                    className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 neon-glow-soft"
-                  >
-                    Add section
-                  </button>
+                <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-slate-300">
+                  <p className="text-sm text-slate-200">Start by clicking a layout below.</p>
+                  <p className="text-xs text-slate-400">
+                    You can still drag and drop, but one-click add is now the default flow.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {starterTemplateKeys.map((key) => {
+                      const block = blockTemplates.find((item) => item.key === key);
+                      if (!block) {
+                        return null;
+                      }
+                      return (
+                        <button
+                          key={block.key}
+                          type="button"
+                          onClick={() => handleAddBlock(block.key)}
+                          className="rounded-full bg-neon-gradient px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 transition hover:brightness-110 neon-glow-soft"
+                        >
+                          Add {block.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div className={canvasContentClassName}>
