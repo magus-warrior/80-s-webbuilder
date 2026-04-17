@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent 
 import type { Asset, ComponentFamily, Node, NodePropValue, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import NodeRenderer from './NodeRenderer';
+import BootstrapContainer from '../layout/BootstrapContainer';
 import { getNodeSchema } from './nodeSchemas';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
 import { useTheme } from './ThemeProvider';
@@ -1076,9 +1077,13 @@ export default function EditorLayout({
                 </div>
               ) : (
                 <div className={canvasContentClassName}>
-                  {nodes.map((node) => (
-                    <NodeRenderer key={node.id} node={node} />
-                  ))}
+                  <BootstrapContainer>
+                    <div className="space-y-4">
+                      {nodes.map((node) => (
+                        <NodeRenderer key={node.id} node={node} />
+                      ))}
+                    </div>
+                  </BootstrapContainer>
                 </div>
               )}
             </div>

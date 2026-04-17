@@ -1,4 +1,5 @@
 import NodeRenderer from './NodeRenderer';
+import BootstrapContainer from '../layout/BootstrapContainer';
 
 import type { Node } from '../../models';
 import type { CSSProperties } from 'react';
@@ -46,16 +47,18 @@ export default function RenderedNodesPreview({
           {badgeLabel}
         </span>
       </div>
-      <div className="mt-4 space-y-3">
+      <div className="mt-4">
         {nodes.length > 0 ? (
-          nodes.map((node) => (
-            <NodeRenderer
-              key={node.id}
-              node={node}
-              interactive={false}
-              disableVisualStyles={disableVisualStyles}
-            />
-          ))
+          <BootstrapContainer className="space-y-3">
+            {nodes.map((node) => (
+              <NodeRenderer
+                key={node.id}
+                node={node}
+                interactive={false}
+                disableVisualStyles={disableVisualStyles}
+              />
+            ))}
+          </BootstrapContainer>
         ) : (
           <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-6 text-sm text-slate-400">
             {emptyStateLabel}
