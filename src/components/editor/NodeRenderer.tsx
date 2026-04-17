@@ -389,7 +389,6 @@ const renderLayoutNode = (
 ) => {
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles, interactive);
   if (!interactive) {
-    style.height = undefined;
     if (typeof style.width === 'string' || typeof style.width === 'number') {
       style.width = `min(100%, ${style.width})`;
     }
