@@ -1035,7 +1035,7 @@ export default function NodeRenderer({
     ) : null;
 
   const dragHandle =
-    interactive && !isComponentNodeInstance ? (
+    interactive && isSelected && !isComponentNodeInstance ? (
       <button
         type="button"
         className={`node-drag-handle absolute left-2 top-2 z-30 h-6 w-6 rounded-full border border-slate-700/80 bg-black/70 text-[0.55rem] uppercase tracking-[0.12em] text-slate-300 transition hover:border-cyan-300/70 hover:text-cyan-100 ${
