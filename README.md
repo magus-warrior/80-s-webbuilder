@@ -9,12 +9,15 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 - Uploaded photos are automatically optimized on the backend and stored in each user's asset pool so they can be reused across elements.
 - Published/public page rendering now avoids injecting editor-only container/section chrome (neon border + default padding), so newly created pages match authored styles without unexpected wrapper boxes.
 - Public site admin details (the "Live Site" label, "Open Project" shortcut, and published timestamp) are only shown when the signed-in user owns that specific project.
+- Public-facing pages now remove the editor/admin header container entirely, so visitors only see authored page content.
 - The canvas now separates centering from width constraints: use the center toggle for alignment and choose a width preset (Narrow / Standard / Wide / Full) to match target layouts on large monitors.
 - Published pages now use the same wide (96rem) centered content width as the editor canvas default so block proportions stay consistent between editing and live viewing.
 - Published pages now clamp overflowing block widths, wrap long links/button labels, and tighten mobile spacing so public sites remain usable on narrow phone screens.
 - Layout primitives are now first-class schema nodes (`stack`, `row`, `column`, `grid`, and `card`) with constrained defaults for gap, alignment, distribution, and wrapping so editor and public rendering stay in sync.
 - Drag/drop now supports insertion indicators, index-aware drops into layout compositions, and quick drop zones that wrap incoming blocks in a new row or column.
 - Starter compositions now favor composable primitives (hero variants, feature rows, gallery strips, pricing matrix) instead of monolithic one-off templates.
+- New interactive block types are available: **Form** and **Poll** nodes, plus starter templates for Lead Capture and Audience Poll sections.
+- Public interactions are now tracked in lightweight analytics (page views, form submissions, poll votes) and surfaced in the project dashboard.
 - Nodes are now schema-driven: node type definitions (defaults, inspector field metadata, and render hints) live in a registry so templates and hydration can evolve safely while preserving older saved content.
 - Inspector controls are now componentized and schema-driven: field definitions can declare basic/advanced visibility, validation constraints, and type-specific defaults.
 - The schema field renderer now supports text/textarea/rich text, image and link pickers, numeric/range controls, toggles/selects, and list/repeater editing for multi-item content sections.

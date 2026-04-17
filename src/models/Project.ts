@@ -2,6 +2,27 @@ import type { ComponentFamily } from './Component';
 import type { Page } from './Page';
 import type { ThemeToken } from './ThemeToken';
 
+export interface ProjectAnalyticsSummary {
+  pageViews: number;
+  formSubmissions: number;
+  pollVotes: number;
+}
+
+export interface ProjectAnalyticsNodeStats {
+  nodeId: string;
+  type?: string;
+  name?: string;
+  views: number;
+  submissions: number;
+  votes: number;
+}
+
+export interface ProjectAnalytics {
+  summary: ProjectAnalyticsSummary;
+  byNode: ProjectAnalyticsNodeStats[];
+  updatedAt?: string | null;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -12,6 +33,7 @@ export interface Project {
   publicPageId?: string | null;
   isPublished?: boolean;
   publishedAt?: string | null;
+  analytics?: ProjectAnalytics;
   pages: Page[];
   themeTokens: ThemeToken[];
   componentFamilies?: ComponentFamily[];
