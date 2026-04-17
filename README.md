@@ -19,6 +19,10 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 - Inspector controls are now componentized and schema-driven: field definitions can declare basic/advanced visibility, validation constraints, and type-specific defaults.
 - The schema field renderer now supports text/textarea/rich text, image and link pickers, numeric/range controls, toggles/selects, and list/repeater editing for multi-item content sections.
 - Node prop updates now support nested paths (for example `featureItems.0.title`) so inspector controls can safely edit deeply nested structures instead of only flat keys.
+- Projects now support reusable component families with variants (for example `Hero / Split Hero / Minimal Hero`) so section definitions are centrally managed and can be reused across pages.
+- You can convert any selected node subtree into a reusable component from the inspector via **Save as component**; the editor replaces the original subtree with a component instance.
+- Component instances keep structure in sync with their source variant while allowing controlled per-instance overrides for text, image, link, and style fields.
+- Layers and inspector views now differentiate source components vs instances, including explicit instance badges and a dedicated override editor.
 
 ## Deploy with systemd
 1. Install backend dependencies:

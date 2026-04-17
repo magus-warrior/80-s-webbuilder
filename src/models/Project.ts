@@ -1,3 +1,4 @@
+import type { ComponentFamily } from './Component';
 import type { Page } from './Page';
 import type { ThemeToken } from './ThemeToken';
 
@@ -13,6 +14,7 @@ export interface Project {
   publishedAt?: string | null;
   pages: Page[];
   themeTokens: ThemeToken[];
+  componentFamilies?: ComponentFamily[];
 }
 
 export interface ProjectSummary {

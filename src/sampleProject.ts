@@ -5,6 +5,7 @@ export const localSampleProject: Project = {
   name: 'Local Starter Project',
   description: 'Built-in starter content used when remote sample JSON is unavailable.',
   updatedAt: new Date(0).toISOString(),
+  componentFamilies: [],
   themeTokens: [
     {
       name: 'brand.neon',

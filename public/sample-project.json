@@ -3,6 +3,7 @@
   "name": "demon.beauty Starter",
   "description": "A dark-glam landing page starter for demon.beauty.",
   "updatedAt": "2024-05-12T18:30:00Z",
+  "componentFamilies": [],
   "themeTokens": [
     {
       "name": "brand.neon",

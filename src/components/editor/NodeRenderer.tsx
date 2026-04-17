@@ -13,6 +13,7 @@ import type { Node } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import { getNodePropAsString } from './nodeSchemas';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
+import { isComponentInstanceNode, resolveComponentInstanceNode } from './componentInstances';
 import { useTheme } from './ThemeProvider';
 
 type NodeRendererProps = {
@@ -458,6 +459,13 @@ export default function NodeRenderer({
   interactive = true,
   disableVisualStyles = false
 }: NodeRendererProps) {
+  const componentFamilies = useEditorStore((state) => state.componentFamilies);
+  const resolvedNode = useMemo(() => {
+    if (!isComponentInstanceNode(node)) {
+      return node;
+    }
+    return resolveComponentInstanceNode(node, componentFamilies) ?? node;
+  }, [componentFamilies, node]);
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId);
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const updateNodeProps = useEditorStore((state) => state.updateNodeProps);
@@ -466,13 +474,14 @@ export default function NodeRenderer({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const interactableRef = useRef<ReturnType<typeof interact> | null>(null);
   const { tokens } = useTheme();
-  const x = parseLength(getNodePropAsString(node, 'x'));
-  const y = parseLength(getNodePropAsString(node, 'y'));
-  const width = getNodePropAsString(node, 'width');
-  const height = getNodePropAsString(node, 'height');
+  const x = parseLength(getNodePropAsString(resolvedNode, 'x'));
+  const y = parseLength(getNodePropAsString(resolvedNode, 'y'));
+  const width = getNodePropAsString(resolvedNode, 'width');
+  const height = getNodePropAsString(resolvedNode, 'height');
   const positionRef = useRef({ x, y });
-  const renderer = nodeRenderers[node.type];
+  const renderer = nodeRenderers[resolvedNode.type];
   const tokenMap = useMemo(() => buildTokenVarMap(tokens), [tokens]);
+  const isComponentNodeInstance = isComponentInstanceNode(node);
   const isSelected = selectedNodeId === node.id;
   const [isEditing, setIsEditing] = useState(false);
   const [dropIndicatorIndex, setDropIndicatorIndex] = useState<number | null>(null);
@@ -483,21 +492,21 @@ export default function NodeRenderer({
     event.stopPropagation();
     setSelectedNodeId(node.id);
   };
-  const isLayoutNode = layoutNodeTypes.has(node.type);
+  const isLayoutNode = layoutNodeTypes.has(resolvedNode.type);
 
   const resolveDropIndex = (event: DragEvent<HTMLDivElement>) => {
-    const childrenCount = node.children?.length ?? 0;
+    const childrenCount = resolvedNode.children?.length ?? 0;
     if (childrenCount === 0) {
       return 0;
     }
     const target = event.target as HTMLElement;
     const childElement = target.closest('[data-node-wrapper="true"]') as HTMLElement | null;
-    if (childElement && childElement.dataset.nodeParentId === node.id) {
+    if (childElement && childElement.dataset.nodeParentId === resolvedNode.id) {
       const childId = childElement.dataset.nodeId;
-      const childIndex = (node.children ?? []).findIndex((child) => child.id === childId);
+      const childIndex = (resolvedNode.children ?? []).findIndex((child) => child.id === childId);
       if (childIndex >= 0) {
         const rect = childElement.getBoundingClientRect();
-        const isRowAxis = node.type === 'row';
+        const isRowAxis = resolvedNode.type === 'row';
         const beforeMidpoint = isRowAxis
           ? event.clientX < rect.left + rect.width / 2
           : event.clientY < rect.top + rect.height / 2;
@@ -580,7 +589,7 @@ export default function NodeRenderer({
     if (height && interactive) {
       style.height = height;
     }
-    if (!interactive) {
+    if (!interactive || isComponentNodeInstance) {
       style.maxWidth = '100%';
       style.transform = undefined;
     }
@@ -593,7 +602,7 @@ export default function NodeRenderer({
   }, [x, y]);
 
   useEffect(() => {
-    if (!interactive) {
+    if (!interactive || isComponentNodeInstance) {
       return;
     }
     const element = wrapperRef.current;
@@ -669,10 +678,10 @@ export default function NodeRenderer({
       interactable.unset();
       interactableRef.current = null;
     };
-  }, [gridSize, interactive, node.id, updateNodeProps]);
+  }, [gridSize, interactive, isComponentNodeInstance, node.id, updateNodeProps]);
 
   useEffect(() => {
-    if (!interactive) {
+    if (!interactive || isComponentNodeInstance) {
       return;
     }
     if (!interactableRef.current) {
@@ -683,7 +692,7 @@ export default function NodeRenderer({
   }, [interactive, isEditing]);
 
   const handleEditableFocus = (event: FocusEvent<HTMLElement>) => {
-    if (!interactive) {
+    if (!interactive || isComponentNodeInstance) {
       return;
     }
     event.stopPropagation();
@@ -692,7 +701,7 @@ export default function NodeRenderer({
   };
 
   const handleEditableBlur = (key: 'content' | 'label') => (event: FocusEvent<HTMLElement>) => {
-    if (!interactive) {
+    if (!interactive || isComponentNodeInstance) {
       return;
     }
     event.stopPropagation();
@@ -702,7 +711,7 @@ export default function NodeRenderer({
   };
 
   const handleEditableInput = (key: 'content' | 'label') => (event: FormEvent<HTMLElement>) => {
-    if (!interactive) {
+    if (!interactive || isComponentNodeInstance) {
       return;
     }
     event.stopPropagation();
@@ -711,7 +720,7 @@ export default function NodeRenderer({
   };
 
   const stopEditablePropagation = (event: MouseEvent<HTMLElement>) => {
-    if (!interactive) {
+    if (!interactive || isComponentNodeInstance) {
       return;
     }
     event.stopPropagation();
@@ -789,7 +798,13 @@ export default function NodeRenderer({
             : 'relative max-w-full rounded-2xl'
         }
       >
-        {renderer(node, interactive, tokenMap, disableVisualStyles, editableProps)}
+        {renderer(
+          resolvedNode,
+          interactive && !isComponentNodeInstance,
+          tokenMap,
+          disableVisualStyles,
+          editableProps
+        )}
         {insertionIndicator}
         {layoutSlotDropZones}
         {resizeHandles}
@@ -811,11 +826,19 @@ export default function NodeRenderer({
             }`
           : 'relative rounded-2xl border border-slate-900/80 bg-black/40 p-4'
       }
-      style={{ ...resolveNodeStyles(node, tokenMap, disableVisualStyles, interactive), ...positionStyle }}
+      style={{
+        ...resolveNodeStyles(
+          resolvedNode,
+          tokenMap,
+          disableVisualStyles,
+          interactive && !isComponentNodeInstance
+        ),
+        ...positionStyle
+      }}
     >
-      <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{node.type}</div>
-      <p className="mt-2 text-sm text-slate-200">{node.name}</p>
-      {renderChildren(node, interactive, disableVisualStyles)}
+      <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{resolvedNode.type}</div>
+      <p className="mt-2 text-sm text-slate-200">{resolvedNode.name}</p>
+      {renderChildren(resolvedNode, interactive && !isComponentNodeInstance, disableVisualStyles)}
       {resizeHandles}
     </div>
   );

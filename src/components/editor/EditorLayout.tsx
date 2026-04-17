@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 
-import type { Asset, Node, Page, ProjectSummary } from '../../models';
+import type { Asset, ComponentFamily, Node, NodePropValue, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import NodeRenderer from './NodeRenderer';
 import { getNodeSchema } from './nodeSchemas';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
 import { useTheme } from './ThemeProvider';
 import NodeInspectorPanel from './inspector/NodeInspectorPanel';
+import {
+  collectComponentOverrideFields,
+  createComponentId,
+  createComponentInstanceNode,
+  getComponentInstanceMetadata,
+  isComponentInstanceNode
+} from './componentInstances';
 
 const findNodeById = (nodes: Node[], nodeId: string | null): Node | null => {
   if (!nodeId) {
@@ -81,7 +88,8 @@ const layerTypeBadgeMap: Record<string, { label: string; icon?: string }> = {
   link: { label: 'Link', icon: '↗' },
   list: { label: 'List', icon: '≡' },
   input: { label: 'Input', icon: '⌨' },
-  form: { label: 'Form', icon: '☰' }
+  form: { label: 'Form', icon: '☰' },
+  'component-instance': { label: 'Component', icon: '◇' }
 };
 
 const getLayerTypeBadge = (type: string): { label: string; icon?: string } => {
@@ -141,6 +149,7 @@ interface EditorLayoutProps {
   activeProjectId: string | null;
   activePageId: string | null;
   assets: Asset[];
+  componentFamilies: ComponentFamily[];
   isLoadingAssets?: boolean;
   isUploadingAsset?: boolean;
   assetError?: string | null;
@@ -166,6 +175,7 @@ export default function EditorLayout({
   activeProjectId,
   activePageId,
   assets,
+  componentFamilies,
   isLoadingAssets = false,
   isUploadingAsset = false,
   assetError = null,
@@ -190,6 +200,9 @@ export default function EditorLayout({
   const setSelectedNodeId = useEditorStore((state) => state.setSelectedNodeId);
   const moveNodeWithinParent = useEditorStore((state) => state.moveNodeWithinParent);
   const gridSize = useEditorStore((state) => state.gridSize);
+  const storeComponentFamilies = useEditorStore((state) => state.componentFamilies);
+  const setComponentFamilies = useEditorStore((state) => state.setComponentFamilies);
+  const updateNodeMetadata = useEditorStore((state) => state.updateNodeMetadata);
   const setGridSize = useEditorStore((state) => state.setGridSize);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
@@ -262,6 +275,95 @@ export default function EditorLayout({
     return projects.find((project) => project.id === activeProjectId)?.name ?? '';
   }, [activeProjectId, projects]);
   const selectedSchema = selectedNode ? getNodeSchema(selectedNode.type) : null;
+
+  const replaceNodeById = (items: Node[], nodeId: string, replacement: Node): Node[] =>
+    items.map((item) => {
+      if (item.id === nodeId) {
+        return replacement;
+      }
+      if (!item.children?.length) {
+        return item;
+      }
+      return {
+        ...item,
+        children: replaceNodeById(item.children, nodeId, replacement)
+      };
+    });
+
+  const handleSaveAsComponent = () => {
+    if (!selectedNode) {
+      return;
+    }
+    const seedName = `${selectedNode.name} / Default`;
+    const response = window.prompt('Save as component (Family / Variant)', seedName)?.trim();
+    if (!response) {
+      return;
+    }
+    const [familyNameRaw, variantNameRaw] = response.split('/').map((item) => item.trim());
+    const familyName = familyNameRaw || selectedNode.name;
+    const variantName = variantNameRaw || 'Default';
+    const now = new Date().toISOString();
+
+    const existingFamily = storeComponentFamilies.find(
+      (family) => family.name.toLowerCase() === familyName.toLowerCase()
+    );
+    const family: ComponentFamily = existingFamily
+      ? {
+          ...existingFamily,
+          variants: [
+            ...existingFamily.variants.filter(
+              (variant) => variant.name.toLowerCase() !== variantName.toLowerCase()
+            ),
+            {
+              id: createComponentId('variant'),
+              name: variantName,
+              rootNode: selectedNode,
+              createdAt: now,
+              updatedAt: now
+            }
+          ],
+          updatedAt: now
+        }
+      : {
+          id: createComponentId('family'),
+          name: familyName,
+          variants: [
+            {
+              id: createComponentId('variant'),
+              name: variantName,
+              rootNode: selectedNode,
+              createdAt: now,
+              updatedAt: now
+            }
+          ],
+          createdAt: now,
+          updatedAt: now
+        };
+
+    const nextFamilies = existingFamily
+      ? storeComponentFamilies.map((item) => (item.id === family.id ? family : item))
+      : [...storeComponentFamilies, family];
+    setComponentFamilies(nextFamilies);
+    const selectedVariant = family.variants[family.variants.length - 1];
+    const instanceNode = createComponentInstanceNode(family, selectedVariant, selectedNode.name);
+    useEditorStore.setState((state) => ({
+      nodes: replaceNodeById(state.nodes, selectedNode.id, instanceNode),
+      selectedNodeId: instanceNode.id
+    }));
+  };
+
+  const selectedInstanceMetadata = selectedNode ? getComponentInstanceMetadata(selectedNode) : null;
+  const selectedComponentFamily = selectedInstanceMetadata
+    ? storeComponentFamilies.find((family) => family.id === selectedInstanceMetadata.familyId) ?? null
+    : null;
+  const selectedComponentVariant =
+    selectedComponentFamily?.variants.find(
+      (variant) => variant.id === selectedInstanceMetadata?.variantId
+    ) ?? null;
+  const componentOverrideFields = selectedComponentVariant
+    ? collectComponentOverrideFields(selectedComponentVariant.rootNode)
+    : [];
+
   const activeCanvasWidthPreset = useMemo(
     () => canvasWidthPresets.find((preset) => preset.id === canvasWidthPreset) ?? canvasWidthPresets[2],
     [canvasWidthPreset]
@@ -270,6 +372,13 @@ export default function EditorLayout({
     const centeredClassName = isCanvasCentered ? 'mx-auto' : '';
     return `w-full space-y-4 transition-all ${centeredClassName} ${activeCanvasWidthPreset.className}`.trim();
   }, [activeCanvasWidthPreset.className, isCanvasCentered]);
+
+  useEffect(() => {
+    if (JSON.stringify(componentFamilies) !== JSON.stringify(storeComponentFamilies)) {
+      setComponentFamilies(componentFamilies);
+    }
+  }, [componentFamilies, setComponentFamilies, storeComponentFamilies]);
+
   const handleResetStyles = () => {
     if (!selectedNode) {
       return;
@@ -896,7 +1005,14 @@ export default function EditorLayout({
                         {typeBadge.icon ? `${typeBadge.icon} ` : ''}
                         {typeBadge.label}
                       </span>
-                      <span className="flex-1 truncate text-slate-100">{item.node.name}</span>
+                      <span className="flex-1 truncate text-slate-100">
+                        {item.node.name}
+                        {isComponentInstanceNode(item.node) ? (
+                          <span className="ml-1 text-[0.55rem] uppercase tracking-[0.18em] text-cyan-300/80">
+                            instance
+                          </span>
+                        ) : null}
+                      </span>
                       {isSelected ? (
                         <button
                           type="button"
@@ -933,6 +1049,10 @@ export default function EditorLayout({
             isUploadingAsset={isUploadingAsset}
             assetError={assetError}
             onUploadAsset={handleAssetUpload}
+            selectedComponentFamily={selectedComponentFamily}
+            selectedComponentVariant={selectedComponentVariant}
+            componentOverrideFields={componentOverrideFields}
+            onSaveAsComponent={handleSaveAsComponent}
             onRenameNode={(node) => {
               const nextName = window.prompt('Rename selected layer', node.name);
               if (nextName?.trim()) {
@@ -941,6 +1061,30 @@ export default function EditorLayout({
             }}
             onUpdateNodeProp={(nodeId, key, value) => {
               updateNodeProps(nodeId, { [key]: value });
+            }}
+            onUpdateComponentInstance={(nodeId, updates) => {
+              updateNodeMetadata(nodeId, (metadata) => ({
+                ...(metadata ?? {}),
+                componentInstance: {
+                  ...((metadata?.componentInstance as Record<string, NodePropValue> | undefined) ?? {}),
+                  ...updates
+                }
+              }));
+            }}
+            onUpdateComponentOverride={(nodeId, overrideKey, value) => {
+              updateNodeMetadata(nodeId, (metadata) => {
+                const existing = (metadata?.componentInstance as { overrides?: Record<string, NodePropValue> } | undefined) ?? undefined;
+                return {
+                  ...(metadata ?? {}),
+                  componentInstance: {
+                    ...(existing ?? {}),
+                    overrides: {
+                      ...(existing?.overrides ?? {}),
+                      [overrideKey]: value
+                    }
+                  }
+                };
+              });
             }}
           />
           <div className="mt-auto flex flex-wrap items-center gap-2">

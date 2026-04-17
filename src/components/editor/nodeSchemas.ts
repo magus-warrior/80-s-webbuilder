@@ -115,6 +115,18 @@ const baseLayoutFields: NodeInspectorField[] = [
 ];
 
 export const nodeSchemaRegistry: Record<string, NodeSchema> = {
+
+  'component-instance': {
+    type: 'component-instance',
+    label: 'Component Instance',
+    defaultName: 'Component Instance',
+    defaultProps: asProps({}),
+    inspectorFields: [],
+    renderHints: {
+      display: 'block',
+      acceptsChildren: false
+    }
+  },
   section: {
     type: 'section',
     label: 'Section',
