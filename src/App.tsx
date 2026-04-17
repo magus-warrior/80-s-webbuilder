@@ -5,6 +5,7 @@ import AuthScreen from './components/auth/AuthScreen';
 import EditorLayout from './components/editor/EditorLayout';
 import RenderedNodesPreview from './components/editor/RenderedNodesPreview';
 import { ThemeProvider } from './components/editor/ThemeProvider';
+import { migrateNodeTree } from './components/editor/nodeSchemas';
 import { useAuthStore } from './store/authStore';
 import { useEditorStore } from './store/editorStore';
 import { localSampleProject } from './sampleProject';
@@ -62,6 +63,14 @@ const readJsonResponse = async <T,>(response: Response, context: string): Promis
     throw new Error(`${context} returned malformed JSON (${message})`);
   }
 };
+
+const normalizeProjectNodes = (project: Project): Project => ({
+  ...project,
+  pages: project.pages.map((page) => ({
+    ...page,
+    nodes: migrateNodeTree(page.nodes ?? [])
+  }))
+});
 
 export default function App() {
   const [project, setProject] = useState<Project | null>(null);
@@ -193,7 +202,7 @@ export default function App() {
       if (!response.ok) {
         throw new Error(`Save failed: ${response.status}`);
       }
-      const savedProject = (await response.json()) as Project;
+        const savedProject = normalizeProjectNodes((await response.json()) as Project);
       const matchesLatest = requestId === saveRequestId.current;
       const matchesUpdatedAt = savedProject.updatedAt === latestProject.current?.updatedAt;
       if (matchesLatest || matchesUpdatedAt) {
@@ -301,7 +310,7 @@ export default function App() {
       if (!response.ok) {
         throw new Error(`Update failed: ${response.status}`);
       }
-      const updatedProject = (await response.json()) as Project;
+      const updatedProject = normalizeProjectNodes((await response.json()) as Project);
       applyProjectUpdate(updatedProject);
       return updatedProject;
     } catch (error) {
@@ -359,7 +368,7 @@ export default function App() {
         }
         throw new Error(message);
       }
-      const updatedProject = (await response.json()) as Project;
+      const updatedProject = normalizeProjectNodes((await response.json()) as Project);
       setProject(updatedProject);
       setPublicSlugDraft(updatedProject.publicSlug ?? '');
       setPublicSlugStatus({ state: 'idle' });
@@ -440,7 +449,9 @@ export default function App() {
                 );
                 continue;
               }
-              seedData = await readJsonResponse<Project>(seedResponse, 'Sample project request');
+              seedData = normalizeProjectNodes(
+                await readJsonResponse<Project>(seedResponse, 'Sample project request')
+              );
               break;
             } catch (error) {
               const message = error instanceof Error ? error.message : 'Unknown error';
@@ -450,7 +461,7 @@ export default function App() {
 
           if (!seedData) {
             const now = new Date().toISOString();
-            seedData = {
+            seedData = normalizeProjectNodes({
               ...localSampleProject,
               id: `project-local-${Date.now().toString(36)}`,
               updatedAt: now,
@@ -460,7 +471,7 @@ export default function App() {
                   ...node
                 }))
               }))
-            };
+            });
             setProjectError(
               `Sample JSON request failed (${seedFailures.join(' | ')}). Loaded built-in starter project instead.`
             );
@@ -477,9 +488,11 @@ export default function App() {
           if (!createdResponse.ok) {
             throw new Error(`Project create failed: ${createdResponse.status}`);
           }
-          const createdProject = await readJsonResponse<Project>(
+          const createdProject = normalizeProjectNodes(
+            await readJsonResponse<Project>(
             createdResponse,
             'Project create request'
+            )
           );
           setProject(createdProject);
           setProjectList([
@@ -570,7 +583,7 @@ export default function App() {
         if (!response.ok) {
           throw new Error(`Project request failed: ${response.status}`);
         }
-        const data = (await response.json()) as Project;
+        const data = normalizeProjectNodes((await response.json()) as Project);
         const localProject = latestProject.current;
         if (localProject?.id === data.id) {
           const localUpdatedAt = Date.parse(localProject.updatedAt ?? '');
@@ -879,7 +892,7 @@ export default function App() {
       if (!response.ok) {
         throw new Error(`Project create failed: ${response.status}`);
       }
-      const createdProject = (await response.json()) as Project;
+      const createdProject = normalizeProjectNodes((await response.json()) as Project);
       setProject(createdProject);
       setProjectList((prev) => [
         {

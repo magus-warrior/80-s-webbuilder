@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { Node } from '../models';
+import type { Node, NodePropValue } from '../models';
 
 type EditorState = {
   nodes: Node[];
@@ -15,7 +15,7 @@ type EditorState = {
   setGridSize: (gridSize: number) => void;
   updateNodeProps: (
     nodeId: string,
-    updates: Record<string, string>,
+    updates: Record<string, NodePropValue>,
     options?: { history?: HistoryMode }
   ) => void;
   updateNodeName: (nodeId: string, name: string) => void;

@@ -4,6 +4,7 @@ import type { Asset, Node, Page, ProjectSummary } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
 import ColorControl from './ColorControl';
 import NodeRenderer from './NodeRenderer';
+import { getNodePropAsString, getNodeSchema } from './nodeSchemas';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
 import { themePresets } from './themePresets';
 import { useTheme } from './ThemeProvider';
@@ -114,9 +115,9 @@ const getStyleFieldValue = (node: Node | null, key: string): string => {
     return '';
   }
   if (key === 'background') {
-    return node.props.background ?? node.props.backgroundColor ?? '';
+    return getNodePropAsString(node, 'background') || getNodePropAsString(node, 'backgroundColor');
   }
-  return node.props[key] ?? '';
+  return getNodePropAsString(node, key);
 };
 
 const buildStyleFieldUpdate = (key: string, value: string): Record<string, string> => {
@@ -367,12 +368,17 @@ export default function EditorLayout({
     }
     return projects.find((project) => project.id === activeProjectId)?.name ?? '';
   }, [activeProjectId, projects]);
-  const textKey = selectedNode?.type === 'button' ? 'label' : 'content';
-  const textValue = selectedNode?.props?.[textKey] ?? '';
-  const linkValue = selectedNode?.props?.href ?? '';
-  const imageSourceValue = selectedNode?.props?.src ?? '';
-  const opensInNewTab = selectedNode?.props?.target === '_blank';
-  const isLayoutNode = selectedNode?.type === 'container' || selectedNode?.type === 'section';
+  const selectedSchema = selectedNode ? getNodeSchema(selectedNode.type) : null;
+  const textField =
+    selectedSchema?.inspectorFields.find((field) => field.key === 'label') ??
+    selectedSchema?.inspectorFields.find((field) => field.key === 'content') ??
+    null;
+  const textKey = textField?.key ?? (selectedNode?.type === 'button' ? 'label' : 'content');
+  const textValue = selectedNode ? getNodePropAsString(selectedNode, textKey) : '';
+  const linkValue = selectedNode ? getNodePropAsString(selectedNode, 'href') : '';
+  const imageSourceValue = selectedNode ? getNodePropAsString(selectedNode, 'src') : '';
+  const opensInNewTab = selectedNode ? getNodePropAsString(selectedNode, 'target') === '_blank' : false;
+  const isLayoutNode = Boolean(selectedSchema?.renderHints.acceptsChildren);
   const activeCanvasWidthPreset = useMemo(
     () => canvasWidthPresets.find((preset) => preset.id === canvasWidthPreset) ?? canvasWidthPresets[2],
     [canvasWidthPreset]
@@ -381,10 +387,9 @@ export default function EditorLayout({
     const centeredClassName = isCanvasCentered ? 'mx-auto' : '';
     return `w-full space-y-4 transition-all ${centeredClassName} ${activeCanvasWidthPreset.className}`.trim();
   }, [activeCanvasWidthPreset.className, isCanvasCentered]);
-  const supportsLinks =
-    selectedNode?.type === 'text' ||
-    selectedNode?.type === 'button' ||
-    selectedNode?.type === 'image';
+  const supportsLinks = Boolean(
+    selectedSchema?.inspectorFields.some((field) => field.key === 'href')
+  );
   const toggleInspectorSection = (section: keyof typeof inspectorSections) => {
     setInspectorSections((prev) => ({
       ...prev,
@@ -1235,7 +1240,7 @@ export default function EditorLayout({
                               {field.label}
                             </span>
                             <select
-                              value={selectedNode.props?.[field.key] ?? ''}
+                              value={getNodePropAsString(selectedNode, field.key)}
                               onChange={(event) =>
                                 updateNodeProps(selectedNode.id, {
                                   [field.key]: event.target.value
@@ -1281,7 +1286,7 @@ export default function EditorLayout({
                           {field.label}
                         </span>
                         <input
-                          value={selectedNode.props?.[field.key] ?? ''}
+                          value={getNodePropAsString(selectedNode, field.key)}
                           onChange={(event) =>
                             updateNodeProps(selectedNode.id, {
                               [field.key]: event.target.value
@@ -1299,7 +1304,7 @@ export default function EditorLayout({
                               {field.label}
                             </span>
                             <input
-                              value={selectedNode.props?.[field.key] ?? ''}
+                              value={getNodePropAsString(selectedNode, field.key)}
                               onChange={(event) =>
                                 updateNodeProps(selectedNode.id, {
                                   [field.key]: event.target.value
@@ -1318,7 +1323,7 @@ export default function EditorLayout({
                               {field.label}
                             </span>
                             <input
-                              value={selectedNode.props?.[field.key] ?? ''}
+                              value={getNodePropAsString(selectedNode, field.key)}
                               onChange={(event) =>
                                 updateNodeProps(selectedNode.id, {
                                   [field.key]: event.target.value
@@ -1389,7 +1394,7 @@ export default function EditorLayout({
                           Alt text
                         </span>
                         <input
-                          value={selectedNode.props?.alt ?? ''}
+                          value={getNodePropAsString(selectedNode, 'alt')}
                           onChange={(event) =>
                             updateNodeProps(selectedNode.id, {
                               alt: event.target.value
@@ -1414,7 +1419,7 @@ export default function EditorLayout({
                               type="button"
                               onClick={() => handleAssetSelect(asset)}
                               className={`flex items-center gap-3 rounded-lg border px-2 py-2 text-left text-xs transition ${
-                                asset.url === selectedNode.props?.src
+                                asset.url === getNodePropAsString(selectedNode, 'src')
                                   ? 'border-cyan-300/70 bg-cyan-500/10 text-cyan-100'
                                   : 'border-slate-800/80 bg-black/60 text-slate-300 hover:border-cyan-400/60'
                               }`}

@@ -1,4 +1,5 @@
 import type { Node } from '../../models';
+import { getNodeSchema } from './nodeSchemas';
 
 export type NodeTemplate = Omit<Node, 'id'> & {
   children?: NodeTemplate[];
@@ -11,13 +12,19 @@ const createNodeId = () => {
   return `node-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-export const buildNodeFromTemplate = (template: NodeTemplate): Node => ({
-  id: createNodeId(),
-  type: template.type,
-  name: template.name,
-  props: template.props,
-  children: template.children?.map(buildNodeFromTemplate)
-});
+export const buildNodeFromTemplate = (template: NodeTemplate): Node => {
+  const schema = getNodeSchema(template.type);
+  return {
+    id: createNodeId(),
+    type: template.type,
+    name: template.name || schema?.defaultName || template.type,
+    props: {
+      ...(schema?.defaultProps ?? {}),
+      ...(template.props ?? {})
+    },
+    children: template.children?.map(buildNodeFromTemplate)
+  };
+};
 
 export const templatePresets: Record<string, NodeTemplate> = {
   Hero: {
