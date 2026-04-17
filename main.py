@@ -514,6 +514,40 @@ def update_page_from_mutation(
         if not isinstance(nodes, list):
             raise HTTPException(status_code=400, detail="Page nodes must be a list")
         updated["nodes"] = nodes
+    if "backgroundColor" in mutation:
+        background_color = mutation.get("backgroundColor")
+        if background_color is not None and not isinstance(background_color, str):
+            raise HTTPException(status_code=400, detail="Page backgroundColor must be a string")
+        updated["backgroundColor"] = (background_color or "").strip()
+    if "backgroundImage" in mutation:
+        background_image = mutation.get("backgroundImage")
+        if background_image is not None and not isinstance(background_image, str):
+            raise HTTPException(status_code=400, detail="Page backgroundImage must be a string")
+        updated["backgroundImage"] = (background_image or "").strip()
+    if "backgroundSize" in mutation:
+        background_size = mutation.get("backgroundSize")
+        allowed_sizes = {"cover", "contain", "auto"}
+        if background_size is not None and (
+            not isinstance(background_size, str) or background_size not in allowed_sizes
+        ):
+            raise HTTPException(status_code=400, detail="Page backgroundSize is invalid")
+        updated["backgroundSize"] = background_size or "cover"
+    if "backgroundPosition" in mutation:
+        background_position = mutation.get("backgroundPosition")
+        if background_position is not None and not isinstance(background_position, str):
+            raise HTTPException(
+                status_code=400, detail="Page backgroundPosition must be a string"
+            )
+        updated["backgroundPosition"] = (background_position or "center").strip()
+    if "backgroundRepeat" in mutation:
+        background_repeat = mutation.get("backgroundRepeat")
+        allowed_repeat = {"no-repeat", "repeat", "repeat-x", "repeat-y"}
+        if background_repeat is not None and (
+            not isinstance(background_repeat, str)
+            or background_repeat not in allowed_repeat
+        ):
+            raise HTTPException(status_code=400, detail="Page backgroundRepeat is invalid")
+        updated["backgroundRepeat"] = background_repeat or "no-repeat"
     return updated
 
 

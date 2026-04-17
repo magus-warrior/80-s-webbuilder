@@ -26,11 +26,23 @@ function PublicSiteShell({
     project?.pages?.find((entry) => entry.id === project.publicPageId) ??
     project?.pages?.[0];
   const nodes = page?.nodes ?? [];
+  const pageBackgroundColor = page?.backgroundColor?.trim() || '#020617';
+  const pageBackgroundImage = page?.backgroundImage?.trim() ?? '';
+  const pageBackgroundSize = page?.backgroundSize ?? 'cover';
+  const pageBackgroundPosition = page?.backgroundPosition ?? 'center';
+  const pageBackgroundRepeat = page?.backgroundRepeat ?? 'no-repeat';
 
   return (
     <div
-      style={cssVariables}
-      className="min-h-screen bg-gradient-to-br from-black via-slate-950 to-slate-900 text-slate-100"
+      style={{
+        ...cssVariables,
+        backgroundColor: pageBackgroundColor,
+        backgroundImage: pageBackgroundImage ? `url("${pageBackgroundImage}")` : undefined,
+        backgroundSize: pageBackgroundSize,
+        backgroundPosition: pageBackgroundPosition,
+        backgroundRepeat: pageBackgroundRepeat
+      }}
+      className="min-h-screen text-slate-100"
     >
       <div className="w-full px-3 py-6 sm:px-6 sm:py-12">
         <div className="mx-auto flex min-h-screen w-full max-w-[96rem] flex-col gap-8 sm:gap-10">

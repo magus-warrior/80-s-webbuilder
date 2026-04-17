@@ -33,6 +33,8 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 - You can convert any selected node subtree into a reusable component from the inspector via **Save as component**; the editor replaces the original subtree with a component instance.
 - Component instances keep structure in sync with their source variant while allowing controlled per-instance overrides for text, image, link, and style fields.
 - Layers and inspector views now differentiate source components vs instances, including explicit instance badges and a dedicated override editor.
+- Every selected node now exposes a universal **Styles** section (text color, background, border, spacing, typography, opacity, etc.), so all element types can be recolored/restyled directly from the inspector.
+- Each page now has editable background settings (color, image URL, fit, position, repeat), and uploaded assets can be picked as the page background image for both editor canvas and published site rendering.
 
 ## Deploy with systemd
 1. Install backend dependencies:
