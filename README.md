@@ -14,7 +14,7 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 - Published pages now use the same wide (96rem) centered content width as the editor canvas default so block proportions stay consistent between editing and live viewing.
 - Published pages now clamp overflowing block widths, wrap long links/button labels, and tighten mobile spacing so public sites remain usable on narrow phone screens.
 - Layout primitives are now first-class schema nodes (`stack`, `row`, `column`, `grid`, and `card`) with constrained defaults for gap, alignment, distribution, and wrapping so editor and public rendering stay in sync.
-- Drag/drop now supports insertion indicators, index-aware drops into layout compositions, and quick drop zones that wrap incoming blocks in a new row or column.
+- Drag/drop now focuses on insertion indicators with index-aware drops into layout compositions, reducing canvas clutter while keeping placement predictable.
 - Builder UX now prioritizes one-click creation: a quick-insert bar sits above the canvas, empty-canvas starter actions add complete sections instantly, and a primitives panel adds rows/columns/cards without requiring drag-and-drop.
 - One-click block/primitive insertion now respects container context: if a layout container is selected, new elements are inserted into that container instead of being appended at the canvas root.
 - Starter compositions now favor composable primitives (hero variants, feature rows, gallery strips, pricing matrix) instead of monolithic one-off templates.
