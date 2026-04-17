@@ -422,10 +422,15 @@ export default function EditorLayout({
     updateNodeProps(selectedNode.id, resetPayload);
   };
   const addNodeToBestTarget = (node: Node) => {
-    if (selectedNode && layoutNodeTypes.has(selectedNode.type)) {
-      addNodeToContainer(selectedNode.id, node);
+    const insertionTarget = [...selectedNodePath]
+      .reverse()
+      .find((candidate) => layoutNodeTypes.has(candidate.type));
+
+    if (insertionTarget) {
+      addNodeToContainer(insertionTarget.id, node);
       return;
     }
+
     addNode(node);
   };
   const handleAddBlock = (templateName: string) => {

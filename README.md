@@ -13,6 +13,7 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 - The canvas now separates centering from width constraints: use the center toggle for alignment and choose a width preset (Narrow / Standard / Wide / Full) to match target layouts on large monitors.
 - Published pages now use the same wide (96rem) centered content width as the editor canvas default so block proportions stay consistent between editing and live viewing.
 - Published pages now clamp overflowing block widths, wrap long links/button labels, and tighten mobile spacing so public sites remain usable on narrow phone screens.
+- Text blocks now force long words/URLs to wrap inside their parent container bounds, and image blocks include a **Show outline** toggle so borders/shadows can be disabled per image.
 - Layout primitives are now first-class schema nodes (`stack`, `row`, `column`, `grid`, and `card`) with constrained defaults for gap, alignment, distribution, and wrapping so editor and public rendering stay in sync.
 - Drag/drop now focuses on insertion indicators with index-aware drops into layout compositions, reducing canvas clutter while keeping placement predictable.
 - Builder UX now prioritizes one-click creation: a quick-insert bar sits above the canvas, empty-canvas starter actions add complete sections instantly, and a primitives panel adds rows/columns/cards without requiring drag-and-drop.

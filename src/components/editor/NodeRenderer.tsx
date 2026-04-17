@@ -109,6 +109,23 @@ const resolveTokenValue = (value: string, tokenMap: Record<string, string>) => {
   return tokenMap[normalized] ?? value;
 };
 
+const readBooleanNodeProp = (node: Node, key: string, fallback: boolean): boolean => {
+  const value = node.props?.[key];
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') {
+      return true;
+    }
+    if (normalized === 'false') {
+      return false;
+    }
+  }
+  return fallback;
+};
+
 const visualStyleProps = new Set([
   'color',
   'background',
@@ -235,7 +252,7 @@ const renderTextNode = (
   const textElement = (
     <p
       style={resolveNodeStyles(node, tokenMap, disableVisualStyles, interactive)}
-      className="text-sm text-inherit"
+      className="max-w-full break-words text-sm text-inherit [overflow-wrap:anywhere]"
       contentEditable={interactive}
       suppressContentEditableWarning
       {...editableProps}
@@ -321,6 +338,7 @@ const renderImageNode = (
   const target = getNodePropAsString(node, 'target').trim();
   const rel = getNodePropAsString(node, 'rel').trim();
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles, interactive);
+  const showOutline = readBooleanNodeProp(node, 'showOutline', true);
 
   if (!src) {
     return (
@@ -338,7 +356,9 @@ const renderImageNode = (
       src={src}
       alt={alt}
       style={style}
-      className="h-auto w-full max-w-full rounded-2xl border border-slate-800 object-cover shadow-lg shadow-slate-900/40"
+      className={`h-auto w-full max-w-full rounded-2xl object-cover ${
+        showOutline ? 'border border-slate-800 shadow-lg shadow-slate-900/40' : ''
+      }`}
     />
   );
 
@@ -1012,10 +1032,10 @@ export default function NodeRenderer({
         data-node-parent-id={parentId ?? undefined}
         className={
           interactive
-            ? `relative cursor-pointer rounded-2xl transition-shadow ${
+            ? `relative min-w-0 cursor-pointer rounded-2xl transition-shadow ${
                 isSelected ? 'neon-ring' : 'neon-ring-hover'
               }`
-            : 'relative max-w-full rounded-2xl'
+            : 'relative min-w-0 max-w-full rounded-2xl'
         }
       >
         {renderer(
@@ -1041,10 +1061,10 @@ export default function NodeRenderer({
       data-node-parent-id={parentId ?? undefined}
       className={
         interactive
-          ? `relative cursor-pointer rounded-2xl border border-slate-900/80 bg-black/40 p-4 transition-shadow ${
+          ? `relative min-w-0 cursor-pointer rounded-2xl border border-slate-900/80 bg-black/40 p-4 transition-shadow ${
               isSelected ? 'neon-ring' : 'neon-ring-hover'
             }`
-          : 'relative rounded-2xl border border-slate-900/80 bg-black/40 p-4'
+          : 'relative min-w-0 rounded-2xl border border-slate-900/80 bg-black/40 p-4'
       }
       style={{
         ...resolveNodeStyles(
