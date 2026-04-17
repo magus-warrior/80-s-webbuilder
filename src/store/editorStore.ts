@@ -21,7 +21,7 @@ type EditorState = {
   updateNodeName: (nodeId: string, name: string) => void;
   removeNode: (nodeId: string) => void;
   addNode: (node: Node) => void;
-  addNodeToContainer: (containerId: string, node: Node) => void;
+  addNodeToContainer: (containerId: string, node: Node, index?: number) => void;
   moveNodeWithinParent: (parentId: string | null, sourceId: string, targetId: string) => void;
   undo: () => void;
   redo: () => void;
@@ -151,14 +151,21 @@ const mergeNodeProps = (existing: NodeProps | undefined, updates: Record<string,
   return nextProps;
 };
 
-const addNodeToTree = (nodes: Node[], containerId: string, nodeToAdd: Node): Node[] => {
+const addNodeToTree = (nodes: Node[], containerId: string, nodeToAdd: Node, index?: number): Node[] => {
   let didInsert = false;
   const nextNodes = nodes.map((node) => {
     if (node.id === containerId) {
       didInsert = true;
+      const existingChildren = node.children ?? [];
+      const insertIndex =
+        typeof index === 'number'
+          ? Math.max(0, Math.min(existingChildren.length, index))
+          : existingChildren.length;
+      const nextChildren = [...existingChildren];
+      nextChildren.splice(insertIndex, 0, nodeToAdd);
       return {
         ...node,
-        children: [...(node.children ?? []), nodeToAdd]
+        children: nextChildren
       };
     }
 
@@ -166,7 +173,7 @@ const addNodeToTree = (nodes: Node[], containerId: string, nodeToAdd: Node): Nod
       return node;
     }
 
-    const nextChildren = addNodeToTree(node.children, containerId, nodeToAdd);
+    const nextChildren = addNodeToTree(node.children, containerId, nodeToAdd, index);
 
     if (nextChildren === node.children) {
       return node;
@@ -419,17 +426,18 @@ export const useEditorStore = create<EditorState>((set, get) => {
         selectedNodeId: node.id
       }));
     },
-    addNodeToContainer: (containerId, node) => {
+    addNodeToContainer: (containerId, node, index) => {
       pushSnapshot();
       console.info('[editor] addNodeToContainer', {
         containerId,
         id: node.id,
         type: node.type,
         name: node.name,
-        childrenCount: node.children?.length ?? 0
+        childrenCount: node.children?.length ?? 0,
+        index: typeof index === 'number' ? index : 'append'
       });
       set((state) => ({
-        nodes: addNodeToTree(state.nodes, containerId, node),
+        nodes: addNodeToTree(state.nodes, containerId, node, index),
         selectedNodeId: node.id
       }));
     },

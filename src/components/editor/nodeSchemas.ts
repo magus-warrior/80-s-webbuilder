@@ -62,6 +62,58 @@ export interface NodeSchema {
 
 const asProps = (props: Record<string, NodePropValue>): NodeProps => ({ ...props });
 
+const alignmentOptions: NodeInspectorFieldOption[] = [
+  { label: 'Start', value: 'flex-start' },
+  { label: 'Center', value: 'center' },
+  { label: 'End', value: 'flex-end' },
+  { label: 'Stretch', value: 'stretch' }
+];
+
+const distributionOptions: NodeInspectorFieldOption[] = [
+  { label: 'Start', value: 'flex-start' },
+  { label: 'Center', value: 'center' },
+  { label: 'End', value: 'flex-end' },
+  { label: 'Space Between', value: 'space-between' },
+  { label: 'Space Around', value: 'space-around' },
+  { label: 'Space Evenly', value: 'space-evenly' }
+];
+
+const wrapOptions: NodeInspectorFieldOption[] = [
+  { label: 'No Wrap', value: 'nowrap' },
+  { label: 'Wrap', value: 'wrap' }
+];
+
+const baseLayoutFields: NodeInspectorField[] = [
+  { key: 'gap', label: 'Gap', type: 'text', placeholder: '16px', basic: true },
+  {
+    key: 'alignItems',
+    label: 'Alignment',
+    type: 'select',
+    options: alignmentOptions,
+    defaultValue: 'stretch',
+    basic: true
+  },
+  {
+    key: 'justifyContent',
+    label: 'Distribution',
+    type: 'select',
+    options: distributionOptions,
+    defaultValue: 'flex-start',
+    basic: true
+  },
+  {
+    key: 'flexWrap',
+    label: 'Wrap',
+    type: 'select',
+    options: wrapOptions,
+    defaultValue: 'nowrap',
+    basic: false
+  },
+  { key: 'padding', label: 'Padding', type: 'text', placeholder: '16px', basic: true },
+  { key: 'backgroundColor', label: 'Background', type: 'text', basic: false },
+  { key: 'borderRadius', label: 'Border radius', type: 'text', placeholder: '12px', basic: false }
+];
+
 export const nodeSchemaRegistry: Record<string, NodeSchema> = {
   section: {
     type: 'section',
@@ -75,13 +127,7 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
     inspectorFields: [
       { key: 'backgroundColor', label: 'Background', type: 'text', basic: true },
       { key: 'padding', label: 'Padding', type: 'text', placeholder: '24px', basic: true },
-      {
-        key: 'borderRadius',
-        label: 'Border radius',
-        type: 'text',
-        placeholder: '12px',
-        basic: false
-      }
+      { key: 'borderRadius', label: 'Border radius', type: 'text', placeholder: '12px', basic: false }
     ],
     renderHints: {
       display: 'block',
@@ -114,16 +160,7 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
         defaultValue: 2,
         basic: true
       },
-      { key: 'gap', label: 'Gap', type: 'text', placeholder: '16px', basic: true },
-      { key: 'padding', label: 'Padding', type: 'text', placeholder: '24px', basic: true },
-      { key: 'backgroundColor', label: 'Background', type: 'text', basic: true },
-      {
-        key: 'borderRadius',
-        label: 'Border radius',
-        type: 'text',
-        placeholder: '12px',
-        basic: false
-      },
+      ...baseLayoutFields,
       {
         key: 'featureItems',
         label: 'Feature list',
@@ -143,6 +180,129 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
         defaultValue: []
       }
     ],
+    renderHints: {
+      display: 'block',
+      acceptsChildren: true
+    }
+  },
+  stack: {
+    type: 'stack',
+    label: 'Stack',
+    defaultName: 'Stack',
+    defaultProps: asProps({
+      direction: 'column',
+      gap: '16px',
+      alignItems: 'stretch',
+      justifyContent: 'flex-start',
+      flexWrap: 'nowrap',
+      padding: '0',
+      backgroundColor: 'transparent',
+      borderRadius: '0'
+    }),
+    inspectorFields: [
+      {
+        key: 'direction',
+        label: 'Direction',
+        type: 'select',
+        options: [
+          { label: 'Vertical', value: 'column' },
+          { label: 'Horizontal', value: 'row' }
+        ],
+        defaultValue: 'column',
+        basic: true
+      },
+      ...baseLayoutFields
+    ],
+    renderHints: {
+      display: 'block',
+      acceptsChildren: true
+    }
+  },
+  row: {
+    type: 'row',
+    label: 'Row',
+    defaultName: 'Row',
+    defaultProps: asProps({
+      gap: '16px',
+      alignItems: 'stretch',
+      justifyContent: 'flex-start',
+      flexWrap: 'nowrap',
+      padding: '0',
+      backgroundColor: 'transparent',
+      borderRadius: '0'
+    }),
+    inspectorFields: baseLayoutFields,
+    renderHints: {
+      display: 'block',
+      acceptsChildren: true
+    }
+  },
+  column: {
+    type: 'column',
+    label: 'Column',
+    defaultName: 'Column',
+    defaultProps: asProps({
+      gap: '12px',
+      alignItems: 'stretch',
+      justifyContent: 'flex-start',
+      flexWrap: 'nowrap',
+      padding: '0',
+      backgroundColor: 'transparent',
+      borderRadius: '0'
+    }),
+    inspectorFields: baseLayoutFields,
+    renderHints: {
+      display: 'block',
+      acceptsChildren: true
+    }
+  },
+  grid: {
+    type: 'grid',
+    label: 'Grid',
+    defaultName: 'Grid',
+    defaultProps: asProps({
+      columns: 3,
+      minColumnWidth: '220px',
+      gap: '16px',
+      alignItems: 'stretch',
+      justifyContent: 'stretch',
+      padding: '0',
+      backgroundColor: 'transparent',
+      borderRadius: '0'
+    }),
+    inspectorFields: [
+      {
+        key: 'columns',
+        label: 'Columns',
+        type: 'number',
+        min: 1,
+        max: 8,
+        step: 1,
+        defaultValue: 3,
+        basic: true
+      },
+      { key: 'minColumnWidth', label: 'Min column width', type: 'text', placeholder: '220px', basic: true },
+      ...baseLayoutFields.filter((field) => field.key !== 'flexWrap')
+    ],
+    renderHints: {
+      display: 'block',
+      acceptsChildren: true
+    }
+  },
+  card: {
+    type: 'card',
+    label: 'Card',
+    defaultName: 'Card',
+    defaultProps: asProps({
+      gap: '12px',
+      alignItems: 'stretch',
+      justifyContent: 'flex-start',
+      flexWrap: 'nowrap',
+      padding: '20px',
+      backgroundColor: 'var(--theme-surface-elevated, rgba(30, 41, 59, 0.7))',
+      borderRadius: 'var(--theme-radius-lg, 16px)'
+    }),
+    inspectorFields: baseLayoutFields,
     renderHints: {
       display: 'block',
       acceptsChildren: true
