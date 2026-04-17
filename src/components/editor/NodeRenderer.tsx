@@ -139,7 +139,7 @@ const resolveNodeStyles = (
   node: Node,
   tokenMap: Record<string, string>,
   disableVisualStyles = false,
-  interactive = true
+  _interactive = true
 ): CSSProperties => {
   const style: CSSProperties = {};
   const props = node.props ?? {};
@@ -175,7 +175,7 @@ const resolveNodeStyles = (
     (style as Record<string, string | number>)[normalizedKey] = fallbackValue;
   });
 
-  return resolveLayoutStyle(node, style, interactive);
+  return resolveLayoutStyle(node, style);
 };
 
 
@@ -183,8 +183,7 @@ const layoutNodeTypes = new Set(['container', 'stack', 'row', 'column', 'grid', 
 
 const resolveLayoutStyle = (
   node: Node,
-  style: CSSProperties,
-  interactive: boolean
+  style: CSSProperties
 ): CSSProperties => {
   const nextStyle: CSSProperties = { ...style };
   const props = node.props ?? {};
@@ -195,9 +194,10 @@ const resolveLayoutStyle = (
     const safeColumns = Number.isNaN(columns) || columns < 1 ? 1 : columns;
     nextStyle.display = 'grid';
     nextStyle.gap = nextStyle.gap ?? '1rem';
-    nextStyle.gridTemplateColumns = interactive
-      ? `repeat(${safeColumns}, minmax(0, 1fr))`
-      : `repeat(auto-fit, minmax(min(100%, ${minColumnWidth}), 1fr))`;
+    nextStyle.gridTemplateColumns =
+      safeColumns <= 1
+        ? 'minmax(0, 1fr)'
+        : `repeat(auto-fit, minmax(min(100%, ${minColumnWidth}), 1fr))`;
     nextStyle.alignItems = nextStyle.alignItems ?? 'stretch';
     nextStyle.justifyContent = nextStyle.justifyContent ?? 'stretch';
     return nextStyle;
