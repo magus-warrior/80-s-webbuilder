@@ -1,10 +1,16 @@
-import type { Node, NodePrimitive, NodePropValue, NodeProps } from '../../models';
+import type { Node, NodePropValue, NodeProps } from '../../models';
 
 export type NodeInspectorFieldType =
   | 'text'
   | 'textarea'
-  | 'select'
+  | 'richtext'
   | 'image'
+  | 'link'
+  | 'number'
+  | 'range'
+  | 'toggle'
+  | 'select'
+  | 'list'
   | 'repeater';
 
 export interface NodeInspectorFieldOption {
@@ -12,13 +18,32 @@ export interface NodeInspectorFieldOption {
   value: string;
 }
 
+export interface RepeaterSubField {
+  key: string;
+  label: string;
+  type: Exclude<NodeInspectorFieldType, 'repeater' | 'list'>;
+  placeholder?: string;
+  options?: NodeInspectorFieldOption[];
+  min?: number;
+  max?: number;
+  step?: number;
+  defaultValue?: NodePropValue;
+}
+
 export interface NodeInspectorField {
   key: string;
   label: string;
   type: NodeInspectorFieldType;
+  basic?: boolean;
   placeholder?: string;
   helperText?: string;
   options?: NodeInspectorFieldOption[];
+  min?: number;
+  max?: number;
+  step?: number;
+  defaultValue?: NodePropValue;
+  listItemLabel?: string;
+  repeaterFields?: RepeaterSubField[];
 }
 
 export interface NodeRenderHints {
@@ -48,9 +73,15 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
       borderRadius: '12px'
     }),
     inspectorFields: [
-      { key: 'backgroundColor', label: 'Background', type: 'text' },
-      { key: 'padding', label: 'Padding', type: 'text', placeholder: '24px' },
-      { key: 'borderRadius', label: 'Border radius', type: 'text', placeholder: '12px' }
+      { key: 'backgroundColor', label: 'Background', type: 'text', basic: true },
+      { key: 'padding', label: 'Padding', type: 'text', placeholder: '24px', basic: true },
+      {
+        key: 'borderRadius',
+        label: 'Border radius',
+        type: 'text',
+        placeholder: '12px',
+        basic: false
+      }
     ],
     renderHints: {
       display: 'block',
@@ -62,28 +93,54 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
     label: 'Container',
     defaultName: 'Container',
     defaultProps: asProps({
-      columns: '2',
+      columns: 2,
       gap: '16px',
       padding: '24px',
       backgroundColor: 'transparent',
-      borderRadius: '12px'
+      borderRadius: '12px',
+      featureItems: [
+        { title: 'Feature one', description: 'Add a clear benefit.' },
+        { title: 'Feature two', description: 'Keep copy concise.' }
+      ]
     }),
     inspectorFields: [
-      { key: 'columns', label: 'Columns', type: 'select', options: [
-        { label: '1', value: '1' },
-        { label: '2', value: '2' },
-        { label: '3', value: '3' },
-        { label: '4', value: '4' }
-      ] },
-      { key: 'gap', label: 'Gap', type: 'text', placeholder: '16px' },
-      { key: 'padding', label: 'Padding', type: 'text', placeholder: '24px' },
-      { key: 'backgroundColor', label: 'Background', type: 'text' },
-      { key: 'borderRadius', label: 'Border radius', type: 'text', placeholder: '12px' },
       {
-        key: 'items',
-        label: 'Repeater items',
+        key: 'columns',
+        label: 'Columns',
+        type: 'number',
+        min: 1,
+        max: 6,
+        step: 1,
+        defaultValue: 2,
+        basic: true
+      },
+      { key: 'gap', label: 'Gap', type: 'text', placeholder: '16px', basic: true },
+      { key: 'padding', label: 'Padding', type: 'text', placeholder: '24px', basic: true },
+      { key: 'backgroundColor', label: 'Background', type: 'text', basic: true },
+      {
+        key: 'borderRadius',
+        label: 'Border radius',
+        type: 'text',
+        placeholder: '12px',
+        basic: false
+      },
+      {
+        key: 'featureItems',
+        label: 'Feature list',
         type: 'repeater',
-        helperText: 'Optional list data used by advanced renderers.'
+        basic: false,
+        helperText: 'Useful for cards, FAQ rows, and feature lists.',
+        listItemLabel: 'Feature',
+        repeaterFields: [
+          { key: 'title', label: 'Title', type: 'text', defaultValue: 'Feature title' },
+          {
+            key: 'description',
+            label: 'Description',
+            type: 'textarea',
+            defaultValue: 'Feature description'
+          }
+        ],
+        defaultValue: []
       }
     ],
     renderHints: {
@@ -98,19 +155,21 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
     defaultProps: asProps({
       content: 'Edit text',
       color: 'var(--theme-text-primary, #e2e8f0)',
-      margin: '0'
+      margin: '0',
+      clampLines: 0
     }),
     inspectorFields: [
-      { key: 'content', label: 'Content', type: 'textarea' },
-      { key: 'href', label: 'Link URL', type: 'text', placeholder: 'https://example.com' },
+      { key: 'content', label: 'Content', type: 'richtext', basic: true },
+      { key: 'href', label: 'Link', type: 'link', basic: true },
       {
-        key: 'target',
-        label: 'Link target',
-        type: 'select',
-        options: [
-          { label: 'Same tab', value: '' },
-          { label: 'New tab', value: '_blank' }
-        ]
+        key: 'clampLines',
+        label: 'Line clamp',
+        type: 'range',
+        min: 0,
+        max: 10,
+        step: 1,
+        defaultValue: 0,
+        basic: false
       }
     ],
     renderHints: {
@@ -130,16 +189,14 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
       color: 'var(--theme-text-on-accent, #0f172a)'
     }),
     inspectorFields: [
-      { key: 'label', label: 'Label', type: 'text' },
-      { key: 'href', label: 'Link URL', type: 'text', placeholder: 'https://example.com' },
+      { key: 'label', label: 'Label', type: 'text', basic: true },
+      { key: 'href', label: 'Link', type: 'link', basic: true },
       {
-        key: 'target',
-        label: 'Link target',
-        type: 'select',
-        options: [
-          { label: 'Same tab', value: '' },
-          { label: 'New tab', value: '_blank' }
-        ]
+        key: 'isPrimary',
+        label: 'Primary button',
+        type: 'toggle',
+        defaultValue: true,
+        basic: false
       }
     ],
     renderHints: {
@@ -155,12 +212,39 @@ export const nodeSchemaRegistry: Record<string, NodeSchema> = {
       src: '',
       alt: 'Image',
       width: '100%',
-      borderRadius: '12px'
+      borderRadius: '12px',
+      loading: 'lazy',
+      tags: []
     }),
     inspectorFields: [
-      { key: 'src', label: 'Image URL', type: 'image', placeholder: 'https://example.com/photo.jpg' },
-      { key: 'alt', label: 'Alt text', type: 'text' },
-      { key: 'caption', label: 'Caption', type: 'textarea' }
+      {
+        key: 'src',
+        label: 'Image',
+        type: 'image',
+        placeholder: 'https://example.com/photo.jpg',
+        basic: true
+      },
+      { key: 'alt', label: 'Alt text', type: 'text', basic: true },
+      { key: 'caption', label: 'Caption', type: 'textarea', basic: false },
+      {
+        key: 'loading',
+        label: 'Loading',
+        type: 'select',
+        basic: false,
+        options: [
+          { label: 'Lazy', value: 'lazy' },
+          { label: 'Eager', value: 'eager' }
+        ],
+        defaultValue: 'lazy'
+      },
+      {
+        key: 'tags',
+        label: 'Tags',
+        type: 'list',
+        listItemLabel: 'Tag',
+        basic: false,
+        defaultValue: []
+      }
     ],
     renderHints: {
       display: 'block',
@@ -173,6 +257,37 @@ export const availableNodeTypes = Object.keys(nodeSchemaRegistry);
 
 export const getNodeSchema = (type: string): NodeSchema | null => nodeSchemaRegistry[type] ?? null;
 
+const readPathParts = (path: string): string[] =>
+  path
+    .replace(/\[(\d+)\]/g, '.$1')
+    .split('.')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+export const getNodePropByPath = (node: Node | null, path: string): NodePropValue | undefined => {
+  if (!node?.props) {
+    return undefined;
+  }
+  const parts = readPathParts(path);
+  let current: NodePropValue | undefined = node.props;
+  for (const part of parts) {
+    if (Array.isArray(current)) {
+      const index = Number.parseInt(part, 10);
+      if (Number.isNaN(index)) {
+        return undefined;
+      }
+      current = current[index];
+      continue;
+    }
+    if (typeof current === 'object' && current !== null) {
+      current = (current as Record<string, NodePropValue>)[part];
+      continue;
+    }
+    return undefined;
+  }
+  return current;
+};
+
 const asString = (value: NodePropValue | undefined): string => {
   if (typeof value === 'string') {
     return value;
@@ -183,12 +298,21 @@ const asString = (value: NodePropValue | undefined): string => {
   return '';
 };
 
-export const getNodePropAsString = (node: Node, key: string): string => asString(node.props?.[key]);
+export const getNodePropAsString = (node: Node, key: string): string => asString(getNodePropByPath(node, key));
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const sanitizePrimitive = (value: unknown): NodePrimitive => {
+const sanitizePropValue = (value: unknown): NodePropValue => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizePropValue(entry));
+  }
+  if (isObjectRecord(value)) {
+    return Object.entries(value).reduce<Record<string, NodePropValue>>((acc, [key, entry]) => {
+      acc[key] = sanitizePropValue(entry);
+      return acc;
+    }, {});
+  }
   if (
     typeof value === 'string' ||
     typeof value === 'number' ||
@@ -198,19 +322,6 @@ const sanitizePrimitive = (value: unknown): NodePrimitive => {
     return value;
   }
   return String(value ?? '');
-};
-
-const sanitizePropValue = (value: unknown): NodePropValue => {
-  if (Array.isArray(value)) {
-    return value.map(sanitizePrimitive);
-  }
-  if (isObjectRecord(value)) {
-    return Object.entries(value).reduce<Record<string, NodePrimitive>>((acc, [key, entry]) => {
-      acc[key] = sanitizePrimitive(entry);
-      return acc;
-    }, {});
-  }
-  return sanitizePrimitive(value);
 };
 
 const mergeDefaultProps = (type: string, props: unknown): NodeProps => {

@@ -13,6 +13,9 @@ demon.beauty is a dark-glam web builder for ritual-ready landing pages.
 - Published pages now use the same wide (96rem) centered content width as the editor canvas default so block proportions stay consistent between editing and live viewing.
 - Published pages now clamp overflowing block widths, wrap long links/button labels, and tighten mobile spacing so public sites remain usable on narrow phone screens.
 - Nodes are now schema-driven: node type definitions (defaults, inspector field metadata, and render hints) live in a registry so templates and hydration can evolve safely while preserving older saved content.
+- Inspector controls are now componentized and schema-driven: field definitions can declare basic/advanced visibility, validation constraints, and type-specific defaults.
+- The schema field renderer now supports text/textarea/rich text, image and link pickers, numeric/range controls, toggles/selects, and list/repeater editing for multi-item content sections.
+- Node prop updates now support nested paths (for example `featureItems.0.title`) so inspector controls can safely edit deeply nested structures instead of only flat keys.
 
 ## Deploy with systemd
 1. Install backend dependencies:

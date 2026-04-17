@@ -1,5 +1,5 @@
 export type NodePrimitive = string | number | boolean | null;
-export type NodePropValue = NodePrimitive | NodePrimitive[] | Record<string, NodePrimitive>;
+export type NodePropValue = NodePrimitive | NodePropValue[] | { [key: string]: NodePropValue };
 export type NodeProps = Record<string, NodePropValue>;
 
 export interface NodeMetadata {
