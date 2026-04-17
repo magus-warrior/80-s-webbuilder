@@ -11,6 +11,7 @@ import interact from 'interactjs';
 
 import type { Node } from '../../models';
 import { useEditorStore } from '../../store/editorStore';
+import { getNodePropAsString } from './nodeSchemas';
 import { blockTemplates, buildNodeFromTemplate } from './templates';
 import { useTheme } from './ThemeProvider';
 
@@ -182,9 +183,9 @@ const renderTextNode = (
   disableVisualStyles: boolean,
   editableProps?: HTMLAttributes<HTMLParagraphElement>
 ) => {
-  const href = node.props?.href?.trim();
-  const target = node.props?.target?.trim();
-  const rel = node.props?.rel?.trim();
+  const href = getNodePropAsString(node, 'href').trim();
+  const target = getNodePropAsString(node, 'target').trim();
+  const rel = getNodePropAsString(node, 'rel').trim();
   const textElement = (
     <p
       style={resolveNodeStyles(node, tokenMap, disableVisualStyles)}
@@ -193,7 +194,7 @@ const renderTextNode = (
       suppressContentEditableWarning
       {...editableProps}
     >
-      {node.props?.content ?? node.name}
+      {getNodePropAsString(node, 'content') || node.name}
     </p>
   );
 
@@ -221,9 +222,9 @@ const renderButtonNode = (
   disableVisualStyles: boolean,
   editableProps?: HTMLAttributes<HTMLButtonElement>
 ) => {
-  const href = node.props?.href?.trim();
-  const target = node.props?.target?.trim();
-  const rel = node.props?.rel?.trim();
+  const href = getNodePropAsString(node, 'href').trim();
+  const target = getNodePropAsString(node, 'target').trim();
+  const rel = getNodePropAsString(node, 'rel').trim();
   const buttonClassName =
     'max-w-full break-words rounded-full bg-neon-gradient px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-inherit shadow-lg neon-glow-soft transition hover:brightness-110';
 
@@ -242,7 +243,7 @@ const renderButtonNode = (
           suppressContentEditableWarning
           {...editableProps}
         >
-          {node.props?.label ?? node.name}
+          {getNodePropAsString(node, 'label') || node.name}
         </span>
       </a>
     );
@@ -257,7 +258,7 @@ const renderButtonNode = (
       suppressContentEditableWarning
       {...editableProps}
     >
-      {node.props?.label ?? node.name}
+      {getNodePropAsString(node, 'label') || node.name}
     </button>
   );
 };
@@ -268,11 +269,11 @@ const renderImageNode = (
   tokenMap: Record<string, string>,
   disableVisualStyles: boolean
 ) => {
-  const src = node.props?.src;
-  const alt = node.props?.alt ?? node.name;
-  const href = node.props?.href?.trim();
-  const target = node.props?.target?.trim();
-  const rel = node.props?.rel?.trim();
+  const src = getNodePropAsString(node, 'src');
+  const alt = getNodePropAsString(node, 'alt') || node.name;
+  const href = getNodePropAsString(node, 'href').trim();
+  const target = getNodePropAsString(node, 'target').trim();
+  const rel = getNodePropAsString(node, 'rel').trim();
   const style = resolveNodeStyles(node, tokenMap, disableVisualStyles);
 
   if (!src) {
@@ -326,7 +327,7 @@ const renderContainerNode = (
     }
   }
   if (!interactive) {
-    const columnCount = Number.parseInt(String(node.props?.columns ?? ''), 10);
+    const columnCount = Number.parseInt(getNodePropAsString(node, 'columns'), 10);
     if (!Number.isNaN(columnCount) && columnCount > 0) {
       style.gridTemplateColumns = `repeat(auto-fit, minmax(min(100%, ${getResponsiveColumnMinWidth(
         columnCount
@@ -439,10 +440,10 @@ export default function NodeRenderer({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const interactableRef = useRef<ReturnType<typeof interact> | null>(null);
   const { tokens } = useTheme();
-  const x = parseLength(node.props?.x);
-  const y = parseLength(node.props?.y);
-  const width = node.props?.width;
-  const height = node.props?.height;
+  const x = parseLength(getNodePropAsString(node, 'x'));
+  const y = parseLength(getNodePropAsString(node, 'y'));
+  const width = getNodePropAsString(node, 'width');
+  const height = getNodePropAsString(node, 'height');
   const positionRef = useRef({ x, y });
   const renderer = nodeRenderers[node.type];
   const tokenMap = useMemo(() => buildTokenVarMap(tokens), [tokens]);

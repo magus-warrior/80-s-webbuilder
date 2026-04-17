@@ -1,7 +1,24 @@
+export type NodePrimitive = string | number | boolean | null;
+export type NodePropValue = NodePrimitive | NodePrimitive[] | Record<string, NodePrimitive>;
+export type NodeProps = Record<string, NodePropValue>;
+
+export interface NodeMetadata {
+  inspector?: {
+    collapsedSections?: string[];
+    hiddenFields?: string[];
+  };
+  editor?: {
+    locked?: boolean;
+    hiddenFromLayers?: boolean;
+  };
+  [key: string]: NodePropValue | undefined;
+}
+
 export interface Node {
   id: string;
-  type: 'section' | 'text' | 'button' | 'image' | 'container';
+  type: string;
   name: string;
-  props?: Record<string, string>;
+  props?: NodeProps;
   children?: Node[];
+  metadata?: NodeMetadata;
 }
