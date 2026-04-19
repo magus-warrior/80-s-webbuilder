@@ -7,16 +7,19 @@ import type {
   Node,
   NodePropValue
 } from '../../../models';
+import { useTheme } from '../ThemeProvider';
 import type { NodeSchema } from '../nodeSchemas';
 import type { ComponentOverrideField } from '../componentInstances';
+import ColorControl from '../ColorControl';
 import FieldRenderer from './FieldRenderer';
 import InspectorSection from './InspectorSection';
 
 const universalStyleFields: NodeSchema['inspectorFields'] = [
-  { key: 'color', label: 'Text color', type: 'text', placeholder: '#e2e8f0', basic: true },
-  { key: 'backgroundColor', label: 'Background color', type: 'text', placeholder: '#0f172a', basic: true },
-  { key: 'background', label: 'Background (advanced)', type: 'text', placeholder: 'linear-gradient(...)', basic: false },
-  { key: 'borderColor', label: 'Border color', type: 'text', placeholder: '#334155', basic: false },
+  { key: 'fontFamily', label: 'Font family', type: 'text', placeholder: 'Font Body', basic: true },
+  { key: 'color', label: 'Text color', type: 'color', placeholder: '#e2e8f0', basic: true },
+  { key: 'backgroundColor', label: 'Background color', type: 'color', placeholder: '#0f172a', basic: true },
+  { key: 'background', label: 'Background (advanced)', type: 'color', placeholder: 'linear-gradient(...)', basic: false },
+  { key: 'borderColor', label: 'Border color', type: 'color', placeholder: '#334155', basic: false },
   { key: 'borderWidth', label: 'Border width', type: 'text', placeholder: '1px', basic: false },
   {
     key: 'borderStyle',
@@ -85,6 +88,7 @@ export default function NodeInspectorPanel({
   onUpdateComponentInstance,
   onUpdateComponentOverride
 }: NodeInspectorPanelProps) {
+  const { tokens, updateTokenValue } = useTheme();
   const [isPropertiesOpen, setIsPropertiesOpen] = useState(true);
   const [isAdvanced, setIsAdvanced] = useState(false);
 
@@ -94,10 +98,54 @@ export default function NodeInspectorPanel({
     [fields, isAdvanced]
   );
 
+  const colorTokens = tokens.filter((token) => token.category === 'color');
+  const fontTokens = tokens.filter((token) => token.category === 'font');
+
   if (!selectedNode) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-800/80 bg-slate-950/40 p-4 text-xs uppercase tracking-[0.2em] text-slate-400">
-        Select a node on the canvas to edit its fields.
+      <div className="space-y-4 text-sm text-slate-200">
+        <InspectorSection title="Global styles" isOpen onToggle={() => undefined}>
+          <div className="mt-3 space-y-3">
+            <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
+              Colors
+            </p>
+            {colorTokens.map((token) => (
+              <ColorControl
+                key={token.name}
+                label={token.name}
+                value={token.value}
+                description={token.description}
+                onChange={(value) => updateTokenValue(token.name, value)}
+              />
+            ))}
+            {colorTokens.length === 0 ? (
+              <p className="text-xs text-slate-500">No global color tokens found.</p>
+            ) : null}
+            <div className="space-y-2">
+              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
+                Fonts
+              </p>
+              {fontTokens.map((token) => (
+                <label key={token.name} className="block">
+                  <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                    {token.name}
+                  </span>
+                  <input
+                    value={token.value}
+                    onChange={(event) => updateTokenValue(token.name, event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                  />
+                </label>
+              ))}
+              {fontTokens.length === 0 ? (
+                <p className="text-xs text-slate-500">No global font tokens found.</p>
+              ) : null}
+            </div>
+          </div>
+        </InspectorSection>
+        <div className="rounded-xl border border-dashed border-slate-800/80 bg-slate-950/40 p-4 text-xs uppercase tracking-[0.2em] text-slate-400">
+          Select an element to edit per-item styles.
+        </div>
       </div>
     );
   }
@@ -228,6 +276,45 @@ export default function NodeInspectorPanel({
       </InspectorSection>
       <InspectorSection title="Styles" isOpen onToggle={() => undefined}>
         <div className="mt-3 space-y-3">
+          <InspectorSection title="Global styles" isOpen onToggle={() => undefined}>
+            <div className="mt-3 space-y-3">
+              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
+                Colors
+              </p>
+              {colorTokens.map((token) => (
+                <ColorControl
+                  key={token.name}
+                  label={token.name}
+                  value={token.value}
+                  description={token.description}
+                  onChange={(value) => updateTokenValue(token.name, value)}
+                />
+              ))}
+              {colorTokens.length === 0 ? (
+                <p className="text-xs text-slate-500">No global color tokens found.</p>
+              ) : null}
+              <div className="space-y-2">
+                <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
+                  Fonts
+                </p>
+                {fontTokens.map((token) => (
+                  <label key={token.name} className="block">
+                    <span className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                      {token.name}
+                    </span>
+                    <input
+                      value={token.value}
+                      onChange={(event) => updateTokenValue(token.name, event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-700/80 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 focus:border-transparent focus:outline-none focus:neon-ring"
+                    />
+                  </label>
+                ))}
+                {fontTokens.length === 0 ? (
+                  <p className="text-xs text-slate-500">No global font tokens found.</p>
+                ) : null}
+              </div>
+            </div>
+          </InspectorSection>
           {universalStyleFields
             .filter((field) => (isAdvanced ? true : field.basic !== false))
             .map((field) => (

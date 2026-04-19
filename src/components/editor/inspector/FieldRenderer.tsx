@@ -1,6 +1,7 @@
 import type { ChangeEvent } from 'react';
 
 import type { Asset, Node, NodePropValue } from '../../../models';
+import ColorControl from '../ColorControl';
 import type { NodeInspectorField } from '../nodeSchemas';
 import { getNodePropAsString, getNodePropByPath } from '../nodeSchemas';
 
@@ -62,6 +63,17 @@ export default function FieldRenderer({
   onUpdateField
 }: FieldRendererProps) {
   const fieldValue = getNodePropByPath(node, field.key);
+
+  if (field.type === 'color') {
+    return (
+      <ColorControl
+        label={field.label}
+        value={getNodePropAsString(node, field.key)}
+        onChange={(value) => onUpdateField(field.key, value)}
+        description={field.helperText}
+      />
+    );
+  }
 
   if (field.type === 'textarea' || field.type === 'richtext') {
     return (

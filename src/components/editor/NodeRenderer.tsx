@@ -47,6 +47,9 @@ const stylePropHandlers: Record<
   fontWeight: (value, style) => {
     style.fontWeight = value;
   },
+  fontFamily: (value, style) => {
+    style.fontFamily = value;
+  },
   textAlign: (value, style) => {
     style.textAlign = value as CSSProperties['textAlign'];
   },

@@ -127,6 +127,7 @@ const resetStyleKeys = [
   'color',
   'background',
   'fontSize',
+  'fontFamily',
   'padding',
   'margin',
   'borderRadius',
