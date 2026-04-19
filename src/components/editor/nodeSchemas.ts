@@ -2,6 +2,7 @@ import type { Node, NodePropValue, NodeProps } from '../../models';
 
 export type NodeInspectorFieldType =
   | 'text'
+  | 'color'
   | 'textarea'
   | 'richtext'
   | 'image'
