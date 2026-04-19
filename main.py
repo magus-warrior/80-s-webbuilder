@@ -75,7 +75,7 @@ def root() -> dict | FileResponse:
     return {"status": "ok"}
 
 
-@app.get("/projects/{project_id}")
+@app.get("/projects/{project_id:int}")
 def get_project(
     project_id: int,
     db: Session = Depends(get_db),
@@ -91,7 +91,7 @@ def get_project(
     return serialize_project(project)
 
 
-@app.post("/projects/{project_id}/publish")
+@app.post("/projects/{project_id:int}/publish")
 def publish_project(
     project_id: int,
     payload: dict[str, Any] = Body(...),
@@ -145,7 +145,7 @@ def publish_project(
     return serialize_project(project)
 
 
-@app.put("/projects/{project_id}")
+@app.put("/projects/{project_id:int}")
 def update_project(
     project_id: int,
     payload: dict[str, Any] = Body(...),
@@ -188,7 +188,7 @@ def update_project(
     return serialize_project(project)
 
 
-@app.put("/projects/{project_id}/metadata")
+@app.put("/projects/{project_id:int}/metadata")
 def update_project_metadata(
     project_id: int,
     payload: dict[str, Any] = Body(...),
@@ -222,7 +222,7 @@ def update_project_metadata(
     return serialize_project(project)
 
 
-@app.delete("/projects/{project_id}")
+@app.delete("/projects/{project_id:int}")
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
@@ -796,7 +796,7 @@ def serialize_analytics(project: Project) -> dict[str, Any]:
     }
 
 
-@app.get("/projects/{project_id}/public-slug/validate")
+@app.get("/projects/{project_id:int}/public-slug/validate")
 def validate_public_slug(
     project_id: int,
     slug: str = Query(...),
@@ -886,7 +886,7 @@ def track_public_project_event(
     }
 
 
-@app.get("/projects/{project_id}/analytics")
+@app.get("/projects/{project_id:int}/analytics")
 def get_project_analytics(
     project_id: int,
     db: Session = Depends(get_db),
